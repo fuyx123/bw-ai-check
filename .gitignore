@@ -6,6 +6,11 @@
 *.swo
 *~
 
+# Project-specific
+效果图/
+skills/
+CLAUDE.md
+
 # IDE
 .vscode/
 .idea/
