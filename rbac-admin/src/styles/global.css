@@ -1,0 +1,815 @@
+/* 全局样式 + 主题定制 */
+:root {
+  --primary-color: #1a2332;
+  --primary-dark: #0f1923;
+  --primary-blue: #1677ff;
+  --sidebar-bg: #1a2332;
+  --sidebar-active: #2a3f5f;
+  --text-white: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --border-color: #e8eaed;
+  --bg-light: #f5f7fa;
+  --bg-card: #ffffff;
+  --status-green: #52c41a;
+  --status-orange: #fa8c16;
+  --status-red: #ff4d4f;
+  --stat-blue: #1a2332;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'Noto Sans SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-light);
+}
+
+#root {
+  height: 100vh;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+  background: var(--sidebar-bg) !important;
+  min-height: 100vh;
+}
+
+.sidebar .ant-menu {
+  background: transparent;
+  border-inline-end: none !important;
+}
+
+.sidebar .ant-menu-item {
+  color: var(--text-secondary);
+  margin: 4px 12px;
+  border-radius: 8px;
+  height: 44px;
+  line-height: 44px;
+}
+
+.sidebar .ant-menu-item:hover {
+  color: var(--text-white);
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.sidebar .ant-menu-item-selected {
+  color: var(--text-white) !important;
+  background: var(--sidebar-active) !important;
+  font-weight: 500;
+}
+
+.sidebar .ant-menu-item .anticon {
+  font-size: 18px;
+}
+
+/* Logo */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px;
+  color: var(--text-white);
+}
+
+.sidebar-logo-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--primary-blue);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: white;
+}
+
+.sidebar-logo h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0;
+}
+
+.sidebar-logo p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 内容区域 */
+.main-content {
+  padding: 24px 32px;
+  background: var(--bg-light);
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.page-header p {
+  color: #666;
+  font-size: 14px;
+}
+
+/* 统计卡片 */
+.stat-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border-color);
+  transition: box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.stat-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.stat-card-icon.blue {
+  background: #e6f4ff;
+  color: var(--primary-blue);
+  border: 2px solid var(--primary-blue);
+}
+
+.stat-card-icon.green {
+  background: #f6ffed;
+  color: var(--status-green);
+  border: 2px solid var(--status-green);
+}
+
+.stat-card-icon.orange {
+  background: #fff7e6;
+  color: var(--status-orange);
+  border: 2px solid var(--status-orange);
+}
+
+.stat-card-label {
+  font-size: 13px;
+  color: #666;
+}
+
+.stat-card-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1;
+}
+
+/* 深色统计卡片 */
+.stat-card-dark {
+  background: var(--stat-blue);
+  border-radius: 16px;
+  padding: 24px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card-dark .stat-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 8px;
+}
+
+.stat-card-dark .stat-value {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.stat-card-dark .stat-growth {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+/* 组织树 */
+.org-tree-panel {
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  height: 100%;
+}
+
+.org-tree-panel .panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.org-tree-panel .panel-title span {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+/* 表格样式 */
+.data-table {
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.data-table .ant-table-thead > tr > th {
+  background: #fafbfc;
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.data-table .ant-table-tbody > tr > td {
+  padding: 16px;
+}
+
+.data-table .ant-table-tbody > tr:hover > td {
+  background: #f8fafc;
+}
+
+/* 信息提示卡片 */
+.info-card {
+  background: linear-gradient(135deg, #f0f5ff 0%, #e6f0ff 100%);
+  border: 1px solid #d6e4ff;
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+.info-card h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a2332;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-card p {
+  font-size: 13px;
+  color: #4a5568;
+  line-height: 1.6;
+}
+
+.info-card .info-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #4a5568;
+}
+
+.info-card .info-rule .rule-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  margin-top: 1px;
+}
+
+.info-card .info-rule .rule-icon.blue {
+  background: var(--primary-blue);
+  color: white;
+}
+
+.info-card .info-rule .rule-icon.orange {
+  background: var(--status-orange);
+  color: white;
+}
+
+/* 帮助浮窗 */
+.help-float {
+  background: var(--stat-blue);
+  border-radius: 12px;
+  padding: 20px;
+  color: white;
+  text-align: center;
+}
+
+.help-float h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.help-float p {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 12px;
+}
+
+/* 生命周期流程 */
+.lifecycle-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.lifecycle-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 80px;
+}
+
+.lifecycle-step-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: #f0f5ff;
+  color: var(--primary-blue);
+}
+
+.lifecycle-step-label {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.lifecycle-connector {
+  flex: 1;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    #d9d9d9 0px,
+    #d9d9d9 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+/* 筛选栏 */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+
+.filter-bar .filter-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* 角色列表卡片 */
+.role-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.role-card:hover {
+  border-color: var(--primary-blue);
+  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.1);
+}
+
+.role-card.active {
+  border-color: var(--primary-blue);
+  background: #f0f5ff;
+}
+
+.role-card .role-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1a1a2e;
+}
+
+.role-card .role-desc {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.role-card .role-users {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+}
+
+/* 权限配置面板 */
+.permission-panel {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.permission-panel h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.permission-panel .panel-desc {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.permission-section {
+  margin-bottom: 24px;
+}
+
+.permission-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.permission-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+/* 数据范围选择 */
+.data-scope-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.data-scope-item {
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.data-scope-item:hover {
+  border-color: var(--primary-blue);
+}
+
+.data-scope-item.active {
+  border-color: var(--primary-blue);
+  background: #1a2332;
+  color: white;
+}
+
+.data-scope-item .scope-level {
+  font-size: 11px;
+  color: #999;
+}
+
+.data-scope-item.active .scope-level {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.data-scope-item .scope-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 4px 0;
+}
+
+.data-scope-item .scope-desc {
+  font-size: 12px;
+  color: #999;
+}
+
+.data-scope-item.active .scope-desc {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* 审计日志 */
+.audit-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.audit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  background: #f5f7fa;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+/* 数据可见性矩阵 */
+.visibility-matrix {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.matrix-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.matrix-row:last-child {
+  border-bottom: none;
+}
+
+.matrix-row .data-name {
+  flex: 1;
+  font-size: 14px;
+  color: #1a1a2e;
+}
+
+.matrix-row .data-code {
+  font-size: 11px;
+  color: #999;
+}
+
+.matrix-icons {
+  display: flex;
+  gap: 24px;
+}
+
+.matrix-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.matrix-icon.unlocked {
+  color: var(--primary-blue);
+}
+
+.matrix-icon.locked {
+  color: #d9d9d9;
+}
+
+/* 层级流转卡片 */
+.flow-card {
+  background: var(--stat-blue);
+  border-radius: 16px;
+  padding: 24px;
+  color: white;
+}
+
+.flow-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.flow-card p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.6;
+}
+
+/* 特定角色规则 */
+.role-rule-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.role-rule-card .rule-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.role-rule-card .rule-icon {
+  width: 44px;
+  height: 44px;
+  background: #f0f5ff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--primary-blue);
+}
+
+.role-rule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #4a5568;
+}
+
+/* 系统集成底部卡片 */
+.integration-card {
+  background: linear-gradient(135deg, #1a2332 0%, #2a3f5f 100%);
+  border-radius: 16px;
+  padding: 32px;
+  color: white;
+  text-align: center;
+  margin-top: 24px;
+}
+
+.integration-card h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.integration-card p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* 分页 */
+.pagination-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: #666;
+}
+
+/* 头部栏 */
+.app-header {
+  background: white;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-search {
+  flex: 1;
+  max-width: 400px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.header-user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a2e;
+}
+
+.header-user-role {
+  font-size: 11px;
+  color: #999;
+}
+
+/* 用户列表项 */
+.user-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-info-cell .user-details h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.user-info-cell .user-details p {
+  font-size: 12px;
+  color: #999;
+  margin: 0;
+}
+
+/* 顶部面包屑 */
+.breadcrumb-bar {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+/* 按钮区域 */
+.page-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* 退出登录 */
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.sidebar-footer button {
+  width: 100%;
+  text-align: left;
+}
+
+/* 标签页样式 */
+.page-tabs {
+  margin-bottom: 24px;
+}
+
+.page-tabs .ant-tabs-tab {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 加权限标签 */
+.scope-check-icon {
+  color: var(--primary-blue);
+  font-size: 16px;
+}
