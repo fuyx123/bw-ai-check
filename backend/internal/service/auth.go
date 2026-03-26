@@ -1,0 +1,198 @@
+package service
+
+import (
+	"fmt"
+
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+	"bw-ai-check/backend/internal/dto"
+	"bw-ai-check/backend/internal/model"
+	jwtpkg "bw-ai-check/backend/pkg/jwt"
+)
+
+// AuthService 认证服务
+type AuthService struct {
+	db *gorm.DB
+}
+
+// NewAuthService 创建认证服务
+func NewAuthService(db *gorm.DB) *AuthService {
+	return &AuthService{db: db}
+}
+
+// LoginResp 登录响应
+type LoginResp struct {
+	Token       string   `json:"token"`
+	User        UserVO   `json:"user"`
+	Permissions []string `json:"permissions"`
+}
+
+// UserVO 用户视图对象（用于响应）
+type UserVO struct {
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Email          string   `json:"email"`
+	Avatar         *string  `json:"avatar,omitempty"`
+	Initials       *string  `json:"initials,omitempty"`
+	UserType       string   `json:"userType"`
+	LoginID        string   `json:"loginId"`
+	DepartmentID   string   `json:"departmentId"`
+	DepartmentName string   `json:"departmentName"`
+	RoleIds        []string `json:"roleIds"`
+	RoleName       string   `json:"roleName"`
+	AccessStatus   string   `json:"accessStatus"`
+	IsActive       bool     `json:"isActive"`
+	Grade          *string  `json:"grade,omitempty"`
+	ClassName      *string  `json:"className,omitempty"`
+	ClassID        *string  `json:"classId,omitempty"`
+	DataScope      string   `json:"dataScope"`
+}
+
+// Login 用户登录
+func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
+	// 1. 查询用户
+	user := &model.User{}
+	err := s.db.Where("login_id = ? AND user_type = ?", req.LoginID, req.UserType).
+		Preload("Roles").
+		First(user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("invalid login credentials")
+		}
+		return nil, fmt.Errorf("failed to query user: %w", err)
+	}
+
+	// 2. 验证密码
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, fmt.Errorf("invalid password")
+	}
+
+	// 3. 检查账户是否激活
+	if !user.IsActive {
+		return nil, fmt.Errorf("account is not active")
+	}
+
+	// 4. 获取部门信息
+	dept := &model.Department{}
+	s.db.Where("id = ?", user.DepartmentID).First(dept)
+
+	// 5. 确定 DataScope 和主角色ID
+	var roleID string
+	var dataScope string
+	if len(user.Roles) > 0 {
+		roleID = user.Roles[0].ID
+		dataScope = user.Roles[0].DataScope
+	} else {
+		// 学生默认为 class scope
+		if req.UserType == "student" {
+			dataScope = "class"
+		} else {
+			dataScope = "school"
+		}
+		roleID = "role-default"
+	}
+
+	// 6. 获取用户权限（菜单 ID）
+	permissions, err := s.getUserPermissions(roleID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get permissions: %w", err)
+	}
+
+	// 7. 生成 JWT Token
+	claims := jwtpkg.Claims{
+		UserID:       user.ID,
+		LoginID:      user.LoginID,
+		UserType:     user.UserType,
+		DataScope:    dataScope,
+		RoleID:       roleID,
+		DepartmentID: user.DepartmentID,
+	}
+	token, err := jwtpkg.GenerateToken(claims)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	// 8. 构建响应
+	userVO := s.modelToVO(user, dept)
+	userVO.DataScope = dataScope
+
+	return &LoginResp{
+		Token:       token,
+		User:        userVO,
+		Permissions: permissions,
+	}, nil
+}
+
+// GetMe 获取当前用户信息
+func (s *AuthService) GetMe(userID string) (*UserVO, error) {
+	user := &model.User{}
+	err := s.db.Where("id = ?", userID).
+		Preload("Roles").
+		First(user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to query user: %w", err)
+	}
+
+	// 获取部门信息
+	dept := &model.Department{}
+	s.db.Where("id = ?", user.DepartmentID).First(dept)
+
+	// 确定 DataScope
+	var dataScope string
+	if len(user.Roles) > 0 {
+		dataScope = user.Roles[0].DataScope
+	} else {
+		dataScope = "school"
+	}
+
+	userVO := s.modelToVO(user, dept)
+	userVO.DataScope = dataScope
+
+	return &userVO, nil
+}
+
+// GetUserPermissions 获取用户权限列表
+func (s *AuthService) getUserPermissions(roleID string) ([]string, error) {
+	var menuIDs []string
+	err := s.db.Table("role_menus").
+		Where("role_id = ?", roleID).
+		Pluck("menu_id", &menuIDs).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to get role menus: %w", err)
+	}
+	return menuIDs, nil
+}
+
+// modelToVO 将 User 模型转换为 VO
+func (s *AuthService) modelToVO(user *model.User, dept *model.Department) UserVO {
+	vo := UserVO{
+		ID:             user.ID,
+		Name:           user.Name,
+		Email:          user.Email,
+		Avatar:         user.Avatar,
+		Initials:       user.Initials,
+		UserType:       user.UserType,
+		LoginID:        user.LoginID,
+		DepartmentID:   user.DepartmentID,
+		DepartmentName: dept.Name,
+		AccessStatus:   user.AccessStatus,
+		IsActive:       user.IsActive,
+		Grade:          user.Grade,
+		ClassName:      user.ClassName,
+		ClassID:        user.ClassID,
+	}
+
+	// 提取角色信息
+	if len(user.Roles) > 0 {
+		vo.RoleIds = make([]string, len(user.Roles))
+		for i, role := range user.Roles {
+			vo.RoleIds[i] = role.ID
+		}
+		vo.RoleName = user.Roles[0].Name
+	}
+
+	return vo
+}

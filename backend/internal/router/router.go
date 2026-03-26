@@ -2,20 +2,43 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"bw-ai-check/backend/config"
 	"bw-ai-check/backend/internal/handler"
 	"bw-ai-check/backend/internal/middleware"
+	"bw-ai-check/backend/internal/service"
 )
 
 // SetupRoutes 注册所有路由
-func SetupRoutes(engine *gin.Engine) {
+func SetupRoutes(engine *gin.Engine, db *gorm.DB) {
 	cfg := config.Get()
 
 	// CORS 中间件
 	engine.Use(middleware.CORS(cfg.CORS.AllowOrigins))
 
+	// ========== 初始化服务层 ==========
+	authSvc := service.NewAuthService(db)
+	deptSvc := service.NewDepartmentService(db)
+	userSvc := service.NewUserService(db)
+	roleSvc := service.NewRoleService(db)
+	menuSvc := service.NewMenuService(db)
+	positionSvc := service.NewPositionService(db)
+	gradeSvc := service.NewGradeService(db)
+	auditSvc := service.NewAuditLogService(db)
+
+	// ========== 初始化处理器层 ==========
+	authHandler := handler.NewAuthHandler(authSvc)
+	deptHandler := handler.NewDepartmentHandler(deptSvc)
+	userHandler := handler.NewUserHandler(userSvc)
+	roleHandler := handler.NewRoleHandler(roleSvc)
+	menuHandler := handler.NewMenuHandler(menuSvc)
+	positionHandler := handler.NewPositionHandler(positionSvc)
+	gradeHandler := handler.NewGradeHandler(gradeSvc)
+	auditHandler := handler.NewAuditLogHandler(auditSvc)
+
+	// ========== 路由注册 ==========
+
 	// 无需认证的路由
-	authHandler := handler.NewAuthHandler()
 	api := engine.Group("/api")
 	{
 		auth := api.Group("/auth")
@@ -31,7 +54,6 @@ func SetupRoutes(engine *gin.Engine) {
 	protected.Use(middleware.JWTMiddleware())
 	{
 		// 部门管理
-		deptHandler := handler.NewDepartmentHandler()
 		dept := protected.Group("/departments")
 		{
 			dept.GET("/tree", middleware.PermissionMiddleware("menu-dept"), deptHandler.GetTree)
@@ -43,7 +65,6 @@ func SetupRoutes(engine *gin.Engine) {
 		}
 
 		// 用户管理
-		userHandler := handler.NewUserHandler()
 		user := protected.Group("/users")
 		{
 			user.GET("", middleware.PermissionMiddleware("menu-users"), userHandler.List)
@@ -55,7 +76,6 @@ func SetupRoutes(engine *gin.Engine) {
 		}
 
 		// 角色管理
-		roleHandler := handler.NewRoleHandler()
 		role := protected.Group("/roles")
 		{
 			role.GET("", middleware.PermissionMiddleware("menu-roles"), roleHandler.List)
@@ -66,7 +86,6 @@ func SetupRoutes(engine *gin.Engine) {
 		}
 
 		// 菜单管理
-		menuHandler := handler.NewMenuHandler()
 		menu := protected.Group("/menus")
 		{
 			menu.GET("/tree", menuHandler.GetTree)
@@ -77,7 +96,6 @@ func SetupRoutes(engine *gin.Engine) {
 		}
 
 		// 岗位管理
-		positionHandler := handler.NewPositionHandler()
 		pos := protected.Group("/positions")
 		{
 			pos.GET("", middleware.PermissionMiddleware("menu-positions"), positionHandler.ListPositions)
@@ -92,7 +110,6 @@ func SetupRoutes(engine *gin.Engine) {
 		}
 
 		// 职级管理
-		gradeHandler := handler.NewGradeHandler()
 		grade := protected.Group("/grades")
 		{
 			grade.GET("", middleware.PermissionMiddleware("menu-grades"), gradeHandler.List)
@@ -100,7 +117,6 @@ func SetupRoutes(engine *gin.Engine) {
 		}
 
 		// 审计日志
-		auditHandler := handler.NewAuditLogHandler()
 		audit := protected.Group("/audit-logs")
 		{
 			audit.GET("", middleware.PermissionMiddleware("menu-audit"), auditHandler.List)

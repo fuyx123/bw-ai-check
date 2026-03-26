@@ -11,7 +11,7 @@ type User struct {
 	Name           string        `gorm:"column:name" json:"name"`
 	Email          string        `gorm:"column:email;uniqueIndex" json:"email"`
 	LoginID        string        `gorm:"column:login_id;uniqueIndex" json:"loginId"`
-	PasswordHash   string        `gorm:"column:password_hash" json:"-"`
+	PasswordHash   string        `gorm:"column:password_hash" json:"-"` // bcrypt hash，不暴露到 JSON
 	Avatar         *string       `gorm:"column:avatar" json:"avatar"`
 	Initials       *string       `gorm:"column:initials" json:"initials"`
 	UserType       string        `gorm:"column:user_type" json:"userType"` // student | staff
@@ -28,7 +28,7 @@ type User struct {
 
 	// Relations
 	Roles []Role `gorm:"many2many:user_roles;foreignKey:ID;joinForeignKey:UserID;references:ID;joinReferences:RoleID" json:"-"`
-	Positions []Position `gorm:"many2many:user_positions;foreignKey:ID;joinForeignKey:UserID;references:ID;joinReferences:PositionID" json:"-"`
+	Positions []Position `gorm:"many2many:user_positions;foreignKey:ID;joinForeignKey:PositionID;references:ID;joinReferences:UserID" json:"-"`
 
 	// Runtime fields
 	RoleIds   []string `gorm:"-" json:"roleIds"`

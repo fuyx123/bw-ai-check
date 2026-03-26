@@ -2,31 +2,34 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+	"bw-ai-check/backend/internal/service"
 	"bw-ai-check/backend/pkg/response"
 )
 
-type MenuHandler struct{}
+type MenuHandler struct {
+	svc *service.MenuService
+}
 
-func NewMenuHandler() *MenuHandler {
-	return &MenuHandler{}
+func NewMenuHandler(svc *service.MenuService) *MenuHandler {
+	return &MenuHandler{svc: svc}
 }
 
 func (h *MenuHandler) GetTree(c *gin.Context) {
-	response.FailWithData(c, response.CodeOperationFail, "TODO: implement menu tree", nil)
+	response.FailWithData(c, response.CodeOperationFail, "TODO", nil)
 }
 
 func (h *MenuHandler) GetUserMenus(c *gin.Context) {
-	response.FailWithData(c, response.CodeOperationFail, "TODO: implement get user menus", nil)
+	response.FailWithData(c, response.CodeOperationFail, "TODO", nil)
 }
 
 func (h *MenuHandler) Create(c *gin.Context) {
-	response.FailWithData(c, response.CodeOperationFail, "TODO: implement create menu", nil)
+	response.FailWithData(c, response.CodeOperationFail, "TODO", nil)
 }
 
 func (h *MenuHandler) Update(c *gin.Context) {
-	response.FailWithData(c, response.CodeOperationFail, "TODO: implement update menu", nil)
+	response.FailWithData(c, response.CodeOperationFail, "TODO", nil)
 }
 
 func (h *MenuHandler) Delete(c *gin.Context) {
-	response.FailWithData(c, response.CodeOperationFail, "TODO: implement delete menu", nil)
+	response.FailWithData(c, response.CodeOperationFail, "TODO", nil)
 }
