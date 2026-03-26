@@ -86,8 +86,8 @@ const Sidebar: React.FC = () => {
           <BookOutlined />
         </div>
         <div>
-          <h1>教务管理系统</h1>
-          <p>EDUCATIONAL ADMIN</p>
+          <h1>八维智能阅卷平台</h1>
+          <p>BAWEI AI MARKING</p>
         </div>
       </div>
 

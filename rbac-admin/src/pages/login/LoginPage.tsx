@@ -118,9 +118,9 @@ const LoginPage: React.FC = () => {
           }}
         >
           <div style={{ fontSize: 18, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 4 }}>
-            教务管理系统
+            八维智能阅卷平台
           </div>
-          <div>EDUCATIONAL ADMIN PLATFORM</div>
+          <div>BAWEI AI MARKING PLATFORM</div>
         </div>
 
         {/* CSS 动画 */}
@@ -161,7 +161,7 @@ const LoginPage: React.FC = () => {
               欢迎回来
             </h1>
             <p style={{ fontSize: 14, color: '#999' }}>
-              登录教务管理系统后台
+              登录八维智能阅卷平台
             </p>
           </div>
 

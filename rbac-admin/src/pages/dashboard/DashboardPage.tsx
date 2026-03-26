@@ -139,7 +139,7 @@ const DashboardPage: React.FC = () => {
       <div className="page-header">
         <h2>工作台</h2>
         <p>
-          欢迎回来，<b>{currentUser?.name}</b>（{currentUser?.role}）· 巴威职业技术学院教务管理系统
+          欢迎回来，<b>{currentUser?.name}</b>（{currentUser?.role}）· 八维智能阅卷平台
         </p>
       </div>
 
