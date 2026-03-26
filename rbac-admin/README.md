@@ -1,6 +1,6 @@
-# 教务管理后台 - RBAC 权限管理系统
+# 八维智能阅卷平台 - RBAC 权限管理系统
 
-基于 React 19 + TypeScript + Ant Design 6 + Zustand 构建的教务管理后台系统，实现了完整的 RBAC（基于角色的访问控制）权限模型。
+基于 React 19 + TypeScript + Ant Design 6 + Zustand 构建的八维智能阅卷平台，实现了完整的 RBAC（基于角色的访问控制）权限模型。
 
 ## 技术栈
 
