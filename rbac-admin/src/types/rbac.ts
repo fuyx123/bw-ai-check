@@ -3,8 +3,9 @@
 export type DataScope = 'school' | 'college' | 'major' | 'class';
 export type DepartmentStatus = 'operational';
 export type AccessStatus = 'full' | 'partial' | 'inactive';
-export type DepartmentLevel = 'university' | 'college' | 'major';
+export type DepartmentLevel = 'university' | 'college' | 'major' | 'class';
 export type MenuItemType = 'menu' | 'button';
+export type UserType = 'student' | 'staff';
 
 export interface MenuItem {
   id: string;
@@ -38,6 +39,12 @@ export interface UserInfo {
   roleIds: string[];
   roleName: string;
   accessStatus: AccessStatus;
+  userType: UserType;
+  loginId: string;       // 学号（学生）或职工号（教职工）
+  // 学生专属
+  grade?: string;        // 年级，如 "2023级"
+  classId?: string;
+  className?: string;    // 班级名，如 "计科2301"
 }
 
 export interface DepartmentLeader {

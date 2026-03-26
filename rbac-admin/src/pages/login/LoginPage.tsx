@@ -1,28 +1,37 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Checkbox, message } from 'antd';
+import { Form, Input, Button, Checkbox, message, Segmented } from 'antd';
 import { UserOutlined, LockOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { useAuthStore } from '../../stores/authStore';
+import type { UserType } from '../../types/rbac';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [userType, setUserType] = useState<UserType>('staff');
+  const [form] = Form.useForm();
+
+  const onUserTypeChange = (val: string | number) => {
+    setUserType(val as UserType);
+    form.resetFields(['username', 'password']);
+  };
 
   const onFinish = (values: { username: string; password: string; remember: boolean }) => {
     setLoading(true);
-    // 模拟网络延迟
     setTimeout(() => {
-      const success = login(values.username, values.password);
+      const success = login(values.username, values.password, userType);
       if (success) {
         message.success('登录成功');
         navigate('/dashboard', { replace: true });
       } else {
-        message.error('账号或密码错误');
+        message.error(userType === 'student' ? '学号或密码错误' : '职工号/账号或密码错误');
       }
       setLoading(false);
     }, 800);
   };
+
+  const isStudent = userType === 'student';
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -147,7 +156,7 @@ const LoginPage: React.FC = () => {
       >
         <div style={{ width: 380, padding: '0 20px' }}>
           {/* 标题 */}
-          <div style={{ marginBottom: 40 }}>
+          <div style={{ marginBottom: 32 }}>
             <h1 style={{ fontSize: 28, fontWeight: 700, color: '#1a1a2e', marginBottom: 8 }}>
               欢迎回来
             </h1>
@@ -156,8 +165,23 @@ const LoginPage: React.FC = () => {
             </p>
           </div>
 
+          {/* 用户类型切换 */}
+          <div style={{ marginBottom: 28 }}>
+            <Segmented
+              block
+              value={userType}
+              onChange={onUserTypeChange}
+              options={[
+                { label: '教职工登录', value: 'staff' },
+                { label: '学生登录', value: 'student' },
+              ]}
+              style={{ borderRadius: 8 }}
+            />
+          </div>
+
           {/* 表单 */}
           <Form
+            form={form}
             name="login"
             onFinish={onFinish}
             autoComplete="off"
@@ -167,12 +191,12 @@ const LoginPage: React.FC = () => {
           >
             <Form.Item
               name="username"
-              label={<span style={{ fontWeight: 500 }}>账号</span>}
-              rules={[{ required: true, message: '账号不能为空' }]}
+              label={<span style={{ fontWeight: 500 }}>{isStudent ? '学号' : '职工号'}</span>}
+              rules={[{ required: true, message: `${isStudent ? '学号' : '职工号'}不能为空` }]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#bbb' }} />}
-                placeholder="请输入账号"
+                placeholder={isStudent ? '请输入学号' : '请输入职工号'}
                 style={{ borderRadius: 8, height: 46 }}
               />
             </Form.Item>
@@ -231,11 +255,22 @@ const LoginPage: React.FC = () => {
             <div style={{ fontSize: 12, color: '#666', marginBottom: 8, fontWeight: 600 }}>
               测试账号
             </div>
-            <div style={{ fontSize: 12, color: '#999', lineHeight: 2 }}>
-              <div>管理员：<code>admin</code> / <code>admin123</code>（全部权限）</div>
-              <div>院长：<code>dean</code> / <code>123456</code>（学院权限）</div>
-              <div>讲师：<code>teacher</code> / <code>123456</code>（基础权限）</div>
-            </div>
+            {isStudent ? (
+              <div style={{ fontSize: 12, color: '#999', lineHeight: 2 }}>
+                <div>全栈·专业一：<code>2024010101</code> / <code>123456</code></div>
+                <div>全栈·专业一：<code>2024010102</code> / <code>123456</code></div>
+                <div>全栈·专高一：<code>2023010601</code> / <code>123456</code></div>
+                <div>云计算·专业二：<code>2024020201</code> / <code>123456</code></div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: '#999', lineHeight: 2 }}>
+                <div>校长：<code>admin</code> / <code>admin123</code>（全部权限）</div>
+                <div>教务：<code>E002</code> / <code>123456</code>（成绩管理）</div>
+                <div>全栈专业主任：<code>E101</code> / <code>123456</code>（专业阶段）</div>
+                <div>全栈专高主任：<code>E102</code> / <code>123456</code>（专高阶段）</div>
+                <div>讲师（全栈专业一）：<code>T10101</code> / <code>123456</code></div>
+              </div>
+            )}
           </div>
         </div>
       </div>

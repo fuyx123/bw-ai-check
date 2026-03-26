@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import type { UserInfo } from '../types/rbac';
+import type { UserInfo, UserType } from '../types/rbac';
 import { users } from '../mocks/data/users';
 
 interface UserFilters {
   departmentId?: string;
   roleId?: string;
   keyword?: string;
+  userType?: UserType;
 }
 
 interface Pagination {
@@ -31,6 +32,9 @@ interface UserState {
 function filterUsers(allUsers: UserInfo[], filters: UserFilters): UserInfo[] {
   let result = [...allUsers];
 
+  if (filters.userType) {
+    result = result.filter((u) => u.userType === filters.userType);
+  }
   if (filters.departmentId) {
     result = result.filter((u) => u.departmentId === filters.departmentId);
   }
@@ -42,7 +46,8 @@ function filterUsers(allUsers: UserInfo[], filters: UserFilters): UserInfo[] {
     result = result.filter(
       (u) =>
         u.name.toLowerCase().includes(kw) ||
-        u.email.toLowerCase().includes(kw),
+        u.email.toLowerCase().includes(kw) ||
+        u.loginId.toLowerCase().includes(kw),
     );
   }
 

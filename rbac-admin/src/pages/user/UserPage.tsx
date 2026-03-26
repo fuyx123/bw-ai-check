@@ -9,6 +9,7 @@ import {
   Select,
   Tag,
   Pagination,
+  Segmented,
 } from 'antd';
 import {
   PlusOutlined,
@@ -21,7 +22,7 @@ import {
 } from '@ant-design/icons';
 import { useUserStore } from '../../stores/userStore';
 import StatusTag from '../../components/common/StatusTag';
-import type { UserInfo } from '../../types/rbac';
+import type { UserInfo, UserType } from '../../types/rbac';
 
 const UserPage: React.FC = () => {
   const {
@@ -39,14 +40,21 @@ const UserPage: React.FC = () => {
   }, [fetchUsers]);
 
   const roleTagColor: Record<string, string> = {
-    主编辑: '#1677ff',
-    内容主管: '#722ed1',
-    外部审计员: '#fa8c16',
-    内部评审员: '#8c8c8c',
-    讲师: '#52c41a',
-    专业负责人: '#13c2c2',
-    院长: '#1677ff',
     校长: '#f5222d',
+    教务: '#fa8c16',
+    专业主任: '#1677ff',
+    专高主任: '#722ed1',
+    讲师: '#13c2c2',
+    学生: '#52c41a',
+  };
+
+  const userTypeTagColor: Record<UserType, string> = {
+    staff: '#1677ff',
+    student: '#52c41a',
+  };
+  const userTypeLabel: Record<UserType, string> = {
+    staff: '教职工',
+    student: '学生',
   };
 
   const columns = [
@@ -59,7 +67,7 @@ const UserPage: React.FC = () => {
           <Avatar
             size={40}
             style={{
-              background: '#1a2332',
+              background: record.userType === 'student' ? '#52c41a' : '#1a2332',
               fontSize: 14,
             }}
           >
@@ -73,6 +81,25 @@ const UserPage: React.FC = () => {
       ),
     },
     {
+      title: '账号',
+      dataIndex: 'loginId',
+      key: 'loginId',
+      render: (loginId: string, record: UserInfo) => (
+        <div>
+          <Tag
+            color={userTypeTagColor[record.userType]}
+            style={{ borderRadius: 4, fontSize: 11, marginBottom: 2 }}
+          >
+            {userTypeLabel[record.userType]}
+          </Tag>
+          <div style={{ fontSize: 13, fontFamily: 'monospace', color: '#333' }}>{loginId}</div>
+          {record.userType === 'student' && record.className && (
+            <div style={{ fontSize: 11, color: '#999' }}>{record.grade} · {record.className}</div>
+          )}
+        </div>
+      ),
+    },
+    {
       title: '部门',
       dataIndex: 'departmentName',
       key: 'department',
@@ -81,12 +108,12 @@ const UserPage: React.FC = () => {
       ),
     },
     {
-      title: '所属角色',
+      title: '角色',
       dataIndex: 'roleName',
       key: 'role',
       render: (role: string) => (
         <Tag
-          color={roleTagColor[role] || '#1677ff'}
+          color={roleTagColor[role] || '#8c8c8c'}
           style={{ borderRadius: 4, fontSize: 12 }}
         >
           {role}
@@ -205,42 +232,59 @@ const UserPage: React.FC = () => {
         </Col>
       </Row>
 
+      {/* 用户类型切换 */}
+      <div style={{ marginBottom: 12 }}>
+        <Segmented
+          value={filters.userType ?? 'all'}
+          onChange={(val) =>
+            setFilter({ userType: val === 'all' ? undefined : (val as UserType) })
+          }
+          options={[
+            { label: '全部用户', value: 'all' },
+            { label: '教职工', value: 'staff' },
+            { label: '学生', value: 'student' },
+          ]}
+        />
+      </div>
+
       {/* 筛选栏 */}
       <div className="filter-bar">
         <span className="filter-label">筛选</span>
         <Select
           value={filters.departmentId || undefined}
           placeholder="所有部门"
-          style={{ width: 180 }}
+          style={{ width: 200 }}
           allowClear
           onChange={(val) => setFilter({ departmentId: val || undefined })}
           options={[
-            { value: 'dept-review', label: '学术评审部' },
-            { value: 'dept-outreach', label: '全球外联部' },
-            { value: 'dept-ethics', label: '机构伦理部' },
-            { value: 'dept-editorial', label: '编辑委员会' },
-            { value: 'dept-cs', label: '计算机科学与技术' },
-            { value: 'dept-se', label: '软件工程' },
-            { value: 'dept-ns', label: '网络安全' },
-            { value: 'dept-ai', label: '人工智能研究中心' },
+            { label: '教务部门', value: 'dept-affairs' },
+            { label: '全栈开发学院·专业阶段', value: 'dept-fs-pro' },
+            { label: '全栈开发学院·专高阶段', value: 'dept-fs-adv' },
+            { label: '云计算学院·专业阶段', value: 'dept-cc-pro' },
+            { label: '云计算学院·专高阶段', value: 'dept-cc-adv' },
+            { label: '传媒学院·专业阶段', value: 'dept-mc-pro' },
+            { label: '传媒学院·专高阶段', value: 'dept-mc-adv' },
+            { label: '游戏学院·专业阶段', value: 'dept-gd-pro' },
+            { label: '游戏学院·专高阶段', value: 'dept-gd-adv' },
+            { label: '鸿蒙学院·专业阶段', value: 'dept-hm-pro' },
+            { label: '鸿蒙学院·专高阶段', value: 'dept-hm-adv' },
+            { label: '大数据学院·专业阶段', value: 'dept-bd-pro' },
+            { label: '大数据学院·专高阶段', value: 'dept-bd-adv' },
           ]}
         />
         <Select
           value={filters.roleId || undefined}
           placeholder="所有角色"
-          style={{ width: 180 }}
+          style={{ width: 160 }}
           allowClear
           onChange={(val) => setFilter({ roleId: val || undefined })}
           prefix={<SettingOutlined />}
           options={[
-            { value: 'role-editor', label: '主编辑' },
-            { value: 'role-content-lead', label: '内容主管' },
-            { value: 'role-auditor', label: '外部审计员' },
-            { value: 'role-reviewer', label: '内部评审员' },
-            { value: 'role-lecturer', label: '讲师' },
-            { value: 'role-major-lead', label: '专业负责人' },
-            { value: 'role-dean', label: '院长' },
-            { value: 'role-president', label: '校长' },
+            { value: 'role-president',        label: '校长' },
+            { value: 'role-academic-affairs', label: '教务' },
+            { value: 'role-pro-director',     label: '专业主任' },
+            { value: 'role-adv-director',     label: '专高主任' },
+            { value: 'role-lecturer',         label: '讲师' },
           ]}
         />
         <div style={{ flex: 1 }} />

@@ -65,19 +65,28 @@ CREATE TABLE IF NOT EXISTS role_menus (
 CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(50) PRIMARY KEY COMMENT '用户唯一标识',
   name VARCHAR(100) NOT NULL COMMENT '用户姓名',
-  email VARCHAR(100) NOT NULL UNIQUE COMMENT '用户邮箱，唯一标识',
+  email VARCHAR(100) NOT NULL UNIQUE COMMENT '用户邮箱',
   avatar VARCHAR(255) COMMENT '用户头像URL',
   initials VARCHAR(10) COMMENT '用户名称缩写（首字母组合）',
   department_id VARCHAR(50) COMMENT '所属部门ID',
   access_status ENUM('full', 'partial', 'inactive') DEFAULT 'full' COMMENT '访问权限状态：full-完全权限，partial-部分权限，inactive-无权限',
   is_active BOOLEAN DEFAULT TRUE COMMENT '用户是否激活：TRUE-激活，FALSE-禁用',
+  -- 用户类型与登录凭证
+  user_type ENUM('student', 'staff') NOT NULL DEFAULT 'staff' COMMENT '用户类型：student-学生，staff-教职工',
+  login_id VARCHAR(50) NOT NULL UNIQUE COMMENT '登录凭证：学号（学生）或职工号（教职工）',
+  -- 学生专属字段
+  grade VARCHAR(20) COMMENT '年级，如 2023级（仅学生）',
+  class_name VARCHAR(50) COMMENT '班级名称，如 计科2301（仅学生）',
+  class_id VARCHAR(50) COMMENT '班级ID（仅学生）',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   FOREIGN KEY (department_id) REFERENCES departments(id),
   KEY idx_department_id (department_id),
   KEY idx_email (email),
-  KEY idx_access_status (access_status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户信息表：存储系统用户的基本信息';
+  KEY idx_access_status (access_status),
+  KEY idx_user_type (user_type),
+  KEY idx_login_id (login_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户信息表：统一存储学生和教职工，通过 user_type 区分';
 
 -- 用户角色关联表
 CREATE TABLE IF NOT EXISTS user_roles (

@@ -60,7 +60,7 @@ const DepartmentPage: React.FC = () => {
 
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([
     'dept-root',
-    'dept-ie',
+    'dept-fs',
   ]);
   const [currentPage, setCurrentPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -78,11 +78,11 @@ const DepartmentPage: React.FC = () => {
 
   useEffect(() => {
     if (!selectedDepartment && flatDepartments.length > 0) {
-      selectDepartment('dept-ie');
+      selectDepartment('dept-fs');
     }
   }, [selectedDepartment, flatDepartments, selectDepartment]);
 
-  const selectedId = selectedDepartment?.id || 'dept-ie';
+  const selectedId = selectedDepartment?.id || 'dept-fs';
 
   // ===== 构建树 =====
   const buildTreeData = (depts: Department[]): DataNode[] => {
@@ -107,7 +107,7 @@ const DepartmentPage: React.FC = () => {
   const totalStaff = currentDepts.reduce((sum, d) => sum + d.staffCount, 0);
 
   const selectedDeptInfo =
-    selectedDepartment || flatDepartments.find((d) => d.id === 'dept-ie');
+    selectedDepartment || flatDepartments.find((d) => d.id === 'dept-fs');
 
   // ===== 导出 Excel =====
   const handleExport = useCallback(() => {
@@ -115,7 +115,7 @@ const DepartmentPage: React.FC = () => {
       部门ID: d.id,
       部门名称: d.name,
       部门编码: d.code,
-      层级: d.level === 'university' ? '学校' : d.level === 'college' ? '学院' : '专业/实验室',
+      层级: d.level === 'university' ? '学校' : d.level === 'college' ? '学院' : d.level === 'major' ? '阶段' : '班级',
       上级部门ID: d.parentId || '—',
       负责人: d.leader.name,
       负责人职称: d.leader.title,
@@ -660,7 +660,7 @@ const DepartmentPage: React.FC = () => {
             <Row>
               <Col span={8} style={{ color: '#999' }}>层级</Col>
               <Col span={16}>
-                {detailDept.level === 'university' ? '学校' : detailDept.level === 'college' ? '学院' : '专业/实验室'}
+                {detailDept.level === 'university' ? '学校' : detailDept.level === 'college' ? '学院' : detailDept.level === 'major' ? '阶段' : '班级'}
               </Col>
             </Row>
             <Row>
