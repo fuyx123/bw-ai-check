@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Row,
   Col,
@@ -10,21 +10,33 @@ import {
   Tag,
   Pagination,
   Segmented,
+  Modal,
+  message,
+  Dropdown,
 } from 'antd';
+import { Form } from 'antd';
 import {
   PlusOutlined,
   UserOutlined,
   TeamOutlined,
   SafetyOutlined,
-  SettingOutlined,
   EditOutlined,
+  DeleteOutlined,
   MoreOutlined,
 } from '@ant-design/icons';
 import { useUserStore } from '../../stores/userStore';
+import { useDepartmentStore } from '../../stores/departmentStore';
+import { useRoleStore } from '../../stores/roleStore';
 import StatusTag from '../../components/common/StatusTag';
+import UserFormModal from '../../components/user/UserFormModal';
 import type { UserInfo, UserType } from '../../types/rbac';
 
 const UserPage: React.FC = () => {
+  const [form] = Form.useForm();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [editingUser, setEditingUser] = useState<UserInfo | null>(null);
+
   const {
     filteredUsers,
     filters,
@@ -33,7 +45,14 @@ const UserPage: React.FC = () => {
     setFilter,
     clearFilters,
     applyFilters,
+    setPagination,
+    addUser,
+    updateUser,
+    deleteUser,
   } = useUserStore();
+
+  const flattenDepartments = useDepartmentStore((s) => s.flatDepartments);
+  const roles = useRoleStore((s) => s.roles);
 
   useEffect(() => {
     fetchUsers();
@@ -42,6 +61,9 @@ const UserPage: React.FC = () => {
   const roleTagColor: Record<string, string> = {
     校长: '#f5222d',
     教务: '#fa8c16',
+    教务处长: '#fa8c16',
+    院长: '#1677ff',
+    专业负责人: '#1677ff',
     专业主任: '#1677ff',
     专高主任: '#722ed1',
     讲师: '#13c2c2',
@@ -52,9 +74,59 @@ const UserPage: React.FC = () => {
     staff: '#1677ff',
     student: '#52c41a',
   };
+
   const userTypeLabel: Record<UserType, string> = {
     staff: '教职工',
     student: '学生',
+  };
+
+  // 打开新增用户对话框
+  const openAddUserModal = () => {
+    setEditingUser(null);
+    setModalMode('add');
+    form.resetFields();
+    setModalOpen(true);
+  };
+
+  // 打开编辑用户对话框
+  const openEditUserModal = (user: UserInfo) => {
+    setEditingUser(user);
+    setModalMode('edit');
+    setModalOpen(true);
+  };
+
+  // 提交用户表单
+  const handleUserSubmit = (values: Partial<UserInfo>) => {
+    if (modalMode === 'edit' && editingUser) {
+      updateUser(editingUser.id, values);
+      message.success(`已更新用户「${values.name}」`);
+    } else {
+      addUser(values);
+      message.success(`已创建用户「${values.name}」`);
+    }
+    setModalOpen(false);
+    form.resetFields();
+  };
+
+  // 删除用户
+  const handleDeleteUser = (user: UserInfo) => {
+    Modal.confirm({
+      title: '删除用户',
+      content: `确定要删除用户「${user.name}」吗？此操作无法撤销。`,
+      okText: '确定删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk() {
+        deleteUser(user.id);
+        message.success(`已删除用户「${user.name}」`);
+      },
+    });
+  };
+
+  // 禁用/启用用户
+  const handleToggleActive = (user: UserInfo) => {
+    updateUser(user.id, { isActive: !user.isActive });
+    message.success(user.isActive ? '已禁用用户' : '已启用用户');
   };
 
   const columns = [
@@ -63,19 +135,23 @@ const UserPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       render: (_: unknown, record: UserInfo) => (
-        <div className="user-info-cell">
+        <div className="user-info-cell" style={{ display: 'flex', gap: 12 }}>
           <Avatar
             size={40}
+            src={record.avatar}
             style={{
               background: record.userType === 'student' ? '#52c41a' : '#1a2332',
               fontSize: 14,
+              flexShrink: 0,
             }}
           >
             {record.initials || record.name.charAt(0)}
           </Avatar>
-          <div className="user-details">
-            <h4>{record.name}</h4>
-            <p>{record.email}</p>
+          <div className="user-details" style={{ flex: 1 }}>
+            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>{record.name}</h4>
+            <p style={{ margin: 0, fontSize: 12, color: '#999', marginTop: 2 }}>
+              {record.email}
+            </p>
           </div>
         </div>
       ),
@@ -84,17 +160,22 @@ const UserPage: React.FC = () => {
       title: '账号',
       dataIndex: 'loginId',
       key: 'loginId',
+      width: 140,
       render: (loginId: string, record: UserInfo) => (
         <div>
           <Tag
             color={userTypeTagColor[record.userType]}
-            style={{ borderRadius: 4, fontSize: 11, marginBottom: 2 }}
+            style={{ borderRadius: 4, fontSize: 11, marginBottom: 4 }}
           >
             {userTypeLabel[record.userType]}
           </Tag>
-          <div style={{ fontSize: 13, fontFamily: 'monospace', color: '#333' }}>{loginId}</div>
+          <div style={{ fontSize: 13, fontFamily: 'monospace', color: '#333' }}>
+            {loginId}
+          </div>
           {record.userType === 'student' && record.className && (
-            <div style={{ fontSize: 11, color: '#999' }}>{record.grade} · {record.className}</div>
+            <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+              {record.grade} · {record.className}
+            </div>
           )}
         </div>
       ),
@@ -103,6 +184,7 @@ const UserPage: React.FC = () => {
       title: '部门',
       dataIndex: 'departmentName',
       key: 'department',
+      width: 150,
       render: (dept: string) => (
         <span style={{ fontSize: 13 }}>{dept}</span>
       ),
@@ -111,6 +193,7 @@ const UserPage: React.FC = () => {
       title: '角色',
       dataIndex: 'roleName',
       key: 'role',
+      width: 100,
       render: (role: string) => (
         <Tag
           color={roleTagColor[role] || '#8c8c8c'}
@@ -124,6 +207,7 @@ const UserPage: React.FC = () => {
       title: '访问状态',
       dataIndex: 'accessStatus',
       key: 'accessStatus',
+      width: 100,
       render: (status: UserInfo['accessStatus']) => (
         <StatusTag status={status} />
       ),
@@ -131,12 +215,43 @@ const UserPage: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      render: () => (
-        <Space>
-          <Button type="text" icon={<EditOutlined />} size="small" />
-          <Button type="text" icon={<MoreOutlined />} size="small" />
-        </Space>
-      ),
+      width: 120,
+      render: (_: unknown, record: UserInfo) => {
+        const items = [
+          {
+            label: '编辑',
+            key: 'edit',
+            icon: <EditOutlined />,
+            onClick: () => openEditUserModal(record),
+          },
+          {
+            label: record.isActive ? '禁用' : '启用',
+            key: 'toggle',
+            onClick: () => handleToggleActive(record),
+          },
+          {
+            label: '删除',
+            key: 'delete',
+            icon: <DeleteOutlined />,
+            danger: true,
+            onClick: () => handleDeleteUser(record),
+          },
+        ];
+
+        return (
+          <Space size="small">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              size="small"
+              onClick={() => openEditUserModal(record)}
+            />
+            <Dropdown menu={{ items }} trigger={['click']}>
+              <Button type="text" icon={<MoreOutlined />} size="small" />
+            </Dropdown>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -157,7 +272,12 @@ const UserPage: React.FC = () => {
             <h2>用户管理</h2>
             <p>管理机构访问权限，分配部门层级，并定义角色。</p>
           </div>
-          <Button type="primary" icon={<PlusOutlined />} size="large">
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="large"
+            onClick={openAddUserModal}
+          >
             新增用户
           </Button>
         </div>
@@ -256,21 +376,10 @@ const UserPage: React.FC = () => {
           style={{ width: 200 }}
           allowClear
           onChange={(val) => setFilter({ departmentId: val || undefined })}
-          options={[
-            { label: '教务部门', value: 'dept-affairs' },
-            { label: '全栈开发学院·专业阶段', value: 'dept-fs-pro' },
-            { label: '全栈开发学院·专高阶段', value: 'dept-fs-adv' },
-            { label: '云计算学院·专业阶段', value: 'dept-cc-pro' },
-            { label: '云计算学院·专高阶段', value: 'dept-cc-adv' },
-            { label: '传媒学院·专业阶段', value: 'dept-mc-pro' },
-            { label: '传媒学院·专高阶段', value: 'dept-mc-adv' },
-            { label: '游戏学院·专业阶段', value: 'dept-gd-pro' },
-            { label: '游戏学院·专高阶段', value: 'dept-gd-adv' },
-            { label: '鸿蒙学院·专业阶段', value: 'dept-hm-pro' },
-            { label: '鸿蒙学院·专高阶段', value: 'dept-hm-adv' },
-            { label: '大数据学院·专业阶段', value: 'dept-bd-pro' },
-            { label: '大数据学院·专高阶段', value: 'dept-bd-adv' },
-          ]}
+          options={flattenDepartments.map((dept: any) => ({
+            label: dept.name,
+            value: dept.id,
+          }))}
         />
         <Select
           value={filters.roleId || undefined}
@@ -278,14 +387,10 @@ const UserPage: React.FC = () => {
           style={{ width: 160 }}
           allowClear
           onChange={(val) => setFilter({ roleId: val || undefined })}
-          prefix={<SettingOutlined />}
-          options={[
-            { value: 'role-president',        label: '校长' },
-            { value: 'role-academic-affairs', label: '教务' },
-            { value: 'role-pro-director',     label: '专业主任' },
-            { value: 'role-adv-director',     label: '专高主任' },
-            { value: 'role-lecturer',         label: '讲师' },
-          ]}
+          options={roles.map((role) => ({
+            label: role.name,
+            value: role.id,
+          }))}
         />
         <div style={{ flex: 1 }} />
         <Button onClick={clearFilters}>清除</Button>
@@ -306,15 +411,31 @@ const UserPage: React.FC = () => {
       {/* 分页 */}
       <div className="pagination-wrapper">
         <span className="pagination-info">
-          显示第 1 至 {filteredUsers.length} 名用户，共 {pagination.total} 名
+          显示第 {filteredUsers.length === 0 ? 0 : 1} 至 {filteredUsers.length} 名用户，共{' '}
+          {pagination.total} 名
         </span>
         <Pagination
           current={pagination.current}
           pageSize={pagination.pageSize}
           total={pagination.total}
           showSizeChanger={false}
+          onChange={(page, pageSize) => setPagination(page, pageSize)}
         />
       </div>
+
+      {/* 用户表单对话框 */}
+      <UserFormModal
+        mode={modalMode}
+        visible={modalOpen}
+        user={editingUser}
+        form={form}
+        onCancel={() => {
+          setModalOpen(false);
+          form.resetFields();
+          setEditingUser(null);
+        }}
+        onSubmit={handleUserSubmit}
+      />
     </div>
   );
 };

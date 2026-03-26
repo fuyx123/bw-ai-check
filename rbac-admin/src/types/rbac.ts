@@ -41,6 +41,9 @@ export interface UserInfo {
   accessStatus: AccessStatus;
   userType: UserType;
   loginId: string;       // 学号（学生）或职工号（教职工）
+  isActive: boolean;     // 账号激活状态
+  createdAt?: string;    // 创建时间
+  updatedAt?: string;    // 更新时间
   // 学生专属
   grade?: string;        // 年级，如 "2023级"
   classId?: string;
