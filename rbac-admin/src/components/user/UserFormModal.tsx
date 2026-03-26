@@ -53,7 +53,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 }) => {
   const roles = useRoleStore((s) => s.roles);
   const allDepartments = useDepartmentStore((s) => s.departments);
-  const flatDepartments = useDepartmentStore((s) => s.flatDepartments);
   const userType = Form.useWatch('userType', form) || 'staff';
 
   // 转换树形结构用于 TreeSelect 显示
