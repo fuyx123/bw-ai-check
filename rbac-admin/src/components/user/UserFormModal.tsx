@@ -23,15 +23,17 @@ interface UserFormModalProps {
  */
 /**
  * 将树形部门数据转换为 TreeSelect 需要的格式
+ * 同时保留原始部门名称用于搜索
  */
 function convertDepartmentsToTreeData(
   departments: Department[],
   prefix = ''
-): DataNode[] {
+): (DataNode & { deptName?: string })[] {
   return departments.map((dept) => ({
     key: dept.id,
     title: `${prefix}${dept.name}`,
     value: dept.id,
+    deptName: dept.name, // 保留原始部门名称用于搜索
     children: dept.children && dept.children.length > 0
       ? convertDepartmentsToTreeData(dept.children, prefix + '  ')
       : undefined,
@@ -170,11 +172,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             rules={[{ required: true, message: '请选择部门' }]}
           >
             <TreeSelect
-              placeholder="选择部门"
+              placeholder="搜索部门名称..."
               treeData={departmentTreeData}
               treeDefaultExpandAll={false}
               showSearch
+              allowClear
               style={{ width: '100%' }}
+              notFoundContent="未找到匹配的部门"
             />
           </Form.Item>
 
@@ -225,11 +229,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                 rules={[{ required: true, message: '请选择班级ID' }]}
               >
                 <TreeSelect
-                  placeholder="选择班级"
+                  placeholder="搜索班级名称..."
                   treeData={departmentTreeData}
                   treeDefaultExpandAll={false}
                   showSearch
+                  allowClear
                   style={{ width: '100%' }}
+                  notFoundContent="未找到匹配的班级"
                 />
               </Form.Item>
             </>
