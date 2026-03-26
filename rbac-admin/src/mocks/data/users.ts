@@ -22,6 +22,7 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E001',
+    isActive: true,
   },
 
   // ======================================================
@@ -39,6 +40,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E002',
+
+    isActive: true,
   },
   {
     id: 'user-affairs-02',
@@ -52,6 +55,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E003',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -69,6 +74,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E101',
+
+    isActive: true,
   },
   {
     id: 'user-fs-adv',
@@ -82,6 +89,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E102',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -99,6 +108,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E201',
+
+    isActive: true,
   },
   {
     id: 'user-cc-adv',
@@ -112,6 +123,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E202',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -129,6 +142,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E301',
+
+    isActive: true,
   },
   {
     id: 'user-mc-adv',
@@ -142,6 +157,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E302',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -159,6 +176,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E401',
+
+    isActive: true,
   },
   {
     id: 'user-gd-adv',
@@ -172,6 +191,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E402',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -189,6 +210,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E501',
+
+    isActive: true,
   },
   {
     id: 'user-hm-adv',
@@ -202,6 +225,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E502',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -219,6 +244,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E601',
+
+    isActive: true,
   },
   {
     id: 'user-bd-adv',
@@ -232,6 +259,8 @@ export const users: UserInfo[] = [
     accessStatus: 'full',
     userType: 'staff',
     loginId: 'E602',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -239,82 +268,82 @@ export const users: UserInfo[] = [
   // ======================================================
 
   // 全栈开发学院
-  { id: 'tch-fs-pro-1', name: '王老师', email: 'wang.t@bwvtc.edu', initials: 'WT', departmentId: 'dept-fs-pro-1', departmentName: '全栈开发学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10101' },
-  { id: 'tch-fs-pro-2', name: '刘老师', email: 'liu.t@bwvtc.edu', initials: 'LT', departmentId: 'dept-fs-pro-2', departmentName: '全栈开发学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10102' },
-  { id: 'tch-fs-pro-3', name: '陈老师', email: 'chen.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-fs-pro-3', departmentName: '全栈开发学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10103' },
-  { id: 'tch-fs-pro-4', name: '赵老师', email: 'zhao.t1@bwvtc.edu', initials: 'ZT', departmentId: 'dept-fs-pro-4', departmentName: '全栈开发学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10104' },
-  { id: 'tch-fs-pro-5', name: '孙老师', email: 'sun.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-fs-pro-5', departmentName: '全栈开发学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10105' },
-  { id: 'tch-fs-adv-1', name: '周老师', email: 'zhou.t1@bwvtc.edu', initials: 'ZT', departmentId: 'dept-fs-adv-1', departmentName: '全栈开发学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10601' },
-  { id: 'tch-fs-adv-2', name: '吴老师', email: 'wu.t1@bwvtc.edu', initials: 'WT', departmentId: 'dept-fs-adv-2', departmentName: '全栈开发学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10602' },
-  { id: 'tch-fs-adv-3', name: '郑老师', email: 'zheng.t1@bwvtc.edu', initials: 'ZT', departmentId: 'dept-fs-adv-3', departmentName: '全栈开发学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10603' },
-  { id: 'tch-fs-adv-4', name: '冯老师', email: 'feng.t1@bwvtc.edu', initials: 'FT', departmentId: 'dept-fs-adv-4', departmentName: '全栈开发学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10604' },
-  { id: 'tch-fs-adv-5', name: '韩老师', email: 'han.t1@bwvtc.edu', initials: 'HT', departmentId: 'dept-fs-adv-5', departmentName: '全栈开发学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10605' },
-  { id: 'tch-fs-adv-6', name: '杨老师', email: 'yang.t1@bwvtc.edu', initials: 'YT', departmentId: 'dept-fs-adv-6', departmentName: '全栈开发学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10606' },
+  { id: 'tch-fs-pro-1', name: '王老师', email: 'wang.t@bwvtc.edu', initials: 'WT', departmentId: 'dept-fs-pro-1', departmentName: '全栈开发学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10101', isActive: true },
+  { id: 'tch-fs-pro-2', name: '刘老师', email: 'liu.t@bwvtc.edu', initials: 'LT', departmentId: 'dept-fs-pro-2', departmentName: '全栈开发学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10102', isActive: true },
+  { id: 'tch-fs-pro-3', name: '陈老师', email: 'chen.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-fs-pro-3', departmentName: '全栈开发学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10103', isActive: true },
+  { id: 'tch-fs-pro-4', name: '赵老师', email: 'zhao.t1@bwvtc.edu', initials: 'ZT', departmentId: 'dept-fs-pro-4', departmentName: '全栈开发学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10104', isActive: true },
+  { id: 'tch-fs-pro-5', name: '孙老师', email: 'sun.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-fs-pro-5', departmentName: '全栈开发学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10105', isActive: true },
+  { id: 'tch-fs-adv-1', name: '周老师', email: 'zhou.t1@bwvtc.edu', initials: 'ZT', departmentId: 'dept-fs-adv-1', departmentName: '全栈开发学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10601', isActive: true },
+  { id: 'tch-fs-adv-2', name: '吴老师', email: 'wu.t1@bwvtc.edu', initials: 'WT', departmentId: 'dept-fs-adv-2', departmentName: '全栈开发学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10602', isActive: true },
+  { id: 'tch-fs-adv-3', name: '郑老师', email: 'zheng.t1@bwvtc.edu', initials: 'ZT', departmentId: 'dept-fs-adv-3', departmentName: '全栈开发学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10603', isActive: true },
+  { id: 'tch-fs-adv-4', name: '冯老师', email: 'feng.t1@bwvtc.edu', initials: 'FT', departmentId: 'dept-fs-adv-4', departmentName: '全栈开发学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10604', isActive: true },
+  { id: 'tch-fs-adv-5', name: '韩老师', email: 'han.t1@bwvtc.edu', initials: 'HT', departmentId: 'dept-fs-adv-5', departmentName: '全栈开发学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10605', isActive: true },
+  { id: 'tch-fs-adv-6', name: '杨老师', email: 'yang.t1@bwvtc.edu', initials: 'YT', departmentId: 'dept-fs-adv-6', departmentName: '全栈开发学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T10606', isActive: true },
 
   // 云计算学院
-  { id: 'tch-cc-pro-1', name: '林老师', email: 'lin.t1@bwvtc.edu', initials: 'LT', departmentId: 'dept-cc-pro-1', departmentName: '云计算学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20101' },
-  { id: 'tch-cc-pro-2', name: '徐老师', email: 'xu.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-cc-pro-2', departmentName: '云计算学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20102' },
-  { id: 'tch-cc-pro-3', name: '何老师', email: 'he.t1@bwvtc.edu', initials: 'HT', departmentId: 'dept-cc-pro-3', departmentName: '云计算学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20103' },
-  { id: 'tch-cc-pro-4', name: '高老师', email: 'gao.t1@bwvtc.edu', initials: 'GT', departmentId: 'dept-cc-pro-4', departmentName: '云计算学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20104' },
-  { id: 'tch-cc-pro-5', name: '罗老师', email: 'luo.t1@bwvtc.edu', initials: 'LT', departmentId: 'dept-cc-pro-5', departmentName: '云计算学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20105' },
-  { id: 'tch-cc-adv-1', name: '梁老师', email: 'liang.t1@bwvtc.edu', initials: 'LT', departmentId: 'dept-cc-adv-1', departmentName: '云计算学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20601' },
-  { id: 'tch-cc-adv-2', name: '宋老师', email: 'song.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-cc-adv-2', departmentName: '云计算学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20602' },
-  { id: 'tch-cc-adv-3', name: '谢老师', email: 'xie.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-cc-adv-3', departmentName: '云计算学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20603' },
-  { id: 'tch-cc-adv-4', name: '唐老师', email: 'tang.t1@bwvtc.edu', initials: 'TT', departmentId: 'dept-cc-adv-4', departmentName: '云计算学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20604' },
-  { id: 'tch-cc-adv-5', name: '邓老师', email: 'deng.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-cc-adv-5', departmentName: '云计算学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20605' },
-  { id: 'tch-cc-adv-6', name: '方老师', email: 'fang.t1@bwvtc.edu', initials: 'FT', departmentId: 'dept-cc-adv-6', departmentName: '云计算学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20606' },
+  { id: 'tch-cc-pro-1', name: '林老师', email: 'lin.t1@bwvtc.edu', initials: 'LT', departmentId: 'dept-cc-pro-1', departmentName: '云计算学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20101', isActive: true },
+  { id: 'tch-cc-pro-2', name: '徐老师', email: 'xu.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-cc-pro-2', departmentName: '云计算学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20102', isActive: true },
+  { id: 'tch-cc-pro-3', name: '何老师', email: 'he.t1@bwvtc.edu', initials: 'HT', departmentId: 'dept-cc-pro-3', departmentName: '云计算学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20103', isActive: true },
+  { id: 'tch-cc-pro-4', name: '高老师', email: 'gao.t1@bwvtc.edu', initials: 'GT', departmentId: 'dept-cc-pro-4', departmentName: '云计算学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20104', isActive: true },
+  { id: 'tch-cc-pro-5', name: '罗老师', email: 'luo.t1@bwvtc.edu', initials: 'LT', departmentId: 'dept-cc-pro-5', departmentName: '云计算学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20105', isActive: true },
+  { id: 'tch-cc-adv-1', name: '梁老师', email: 'liang.t1@bwvtc.edu', initials: 'LT', departmentId: 'dept-cc-adv-1', departmentName: '云计算学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20601', isActive: true },
+  { id: 'tch-cc-adv-2', name: '宋老师', email: 'song.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-cc-adv-2', departmentName: '云计算学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20602', isActive: true },
+  { id: 'tch-cc-adv-3', name: '谢老师', email: 'xie.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-cc-adv-3', departmentName: '云计算学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20603', isActive: true },
+  { id: 'tch-cc-adv-4', name: '唐老师', email: 'tang.t1@bwvtc.edu', initials: 'TT', departmentId: 'dept-cc-adv-4', departmentName: '云计算学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20604', isActive: true },
+  { id: 'tch-cc-adv-5', name: '邓老师', email: 'deng.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-cc-adv-5', departmentName: '云计算学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20605', isActive: true },
+  { id: 'tch-cc-adv-6', name: '方老师', email: 'fang.t1@bwvtc.edu', initials: 'FT', departmentId: 'dept-cc-adv-6', departmentName: '云计算学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T20606', isActive: true },
 
   // 传媒学院
-  { id: 'tch-mc-pro-1', name: '蔡老师', email: 'cai.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-mc-pro-1', departmentName: '传媒学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30101' },
-  { id: 'tch-mc-pro-2', name: '潘老师', email: 'pan.t1@bwvtc.edu', initials: 'PT', departmentId: 'dept-mc-pro-2', departmentName: '传媒学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30102' },
-  { id: 'tch-mc-pro-3', name: '曹老师', email: 'cao.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-mc-pro-3', departmentName: '传媒学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30103' },
-  { id: 'tch-mc-pro-4', name: '袁老师', email: 'yuan.t1@bwvtc.edu', initials: 'YT', departmentId: 'dept-mc-pro-4', departmentName: '传媒学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30104' },
-  { id: 'tch-mc-pro-5', name: '夏老师', email: 'xia.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-mc-pro-5', departmentName: '传媒学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30105' },
-  { id: 'tch-mc-adv-1', name: '余老师', email: 'yu.t1@bwvtc.edu', initials: 'YT', departmentId: 'dept-mc-adv-1', departmentName: '传媒学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30601' },
-  { id: 'tch-mc-adv-2', name: '江老师', email: 'jiang.t1@bwvtc.edu', initials: 'JT', departmentId: 'dept-mc-adv-2', departmentName: '传媒学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30602' },
-  { id: 'tch-mc-adv-3', name: '史老师', email: 'shi.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-mc-adv-3', departmentName: '传媒学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30603' },
-  { id: 'tch-mc-adv-4', name: '顾老师', email: 'gu.t1@bwvtc.edu', initials: 'GT', departmentId: 'dept-mc-adv-4', departmentName: '传媒学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30604' },
-  { id: 'tch-mc-adv-5', name: '侯老师', email: 'hou.t1@bwvtc.edu', initials: 'HT', departmentId: 'dept-mc-adv-5', departmentName: '传媒学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30605' },
-  { id: 'tch-mc-adv-6', name: '龚老师', email: 'gong.t1@bwvtc.edu', initials: 'GT', departmentId: 'dept-mc-adv-6', departmentName: '传媒学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30606' },
+  { id: 'tch-mc-pro-1', name: '蔡老师', email: 'cai.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-mc-pro-1', departmentName: '传媒学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30101', isActive: true },
+  { id: 'tch-mc-pro-2', name: '潘老师', email: 'pan.t1@bwvtc.edu', initials: 'PT', departmentId: 'dept-mc-pro-2', departmentName: '传媒学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30102', isActive: true },
+  { id: 'tch-mc-pro-3', name: '曹老师', email: 'cao.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-mc-pro-3', departmentName: '传媒学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30103', isActive: true },
+  { id: 'tch-mc-pro-4', name: '袁老师', email: 'yuan.t1@bwvtc.edu', initials: 'YT', departmentId: 'dept-mc-pro-4', departmentName: '传媒学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30104', isActive: true },
+  { id: 'tch-mc-pro-5', name: '夏老师', email: 'xia.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-mc-pro-5', departmentName: '传媒学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30105', isActive: true },
+  { id: 'tch-mc-adv-1', name: '余老师', email: 'yu.t1@bwvtc.edu', initials: 'YT', departmentId: 'dept-mc-adv-1', departmentName: '传媒学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30601', isActive: true },
+  { id: 'tch-mc-adv-2', name: '江老师', email: 'jiang.t1@bwvtc.edu', initials: 'JT', departmentId: 'dept-mc-adv-2', departmentName: '传媒学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30602', isActive: true },
+  { id: 'tch-mc-adv-3', name: '史老师', email: 'shi.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-mc-adv-3', departmentName: '传媒学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30603', isActive: true },
+  { id: 'tch-mc-adv-4', name: '顾老师', email: 'gu.t1@bwvtc.edu', initials: 'GT', departmentId: 'dept-mc-adv-4', departmentName: '传媒学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30604', isActive: true },
+  { id: 'tch-mc-adv-5', name: '侯老师', email: 'hou.t1@bwvtc.edu', initials: 'HT', departmentId: 'dept-mc-adv-5', departmentName: '传媒学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30605', isActive: true },
+  { id: 'tch-mc-adv-6', name: '龚老师', email: 'gong.t1@bwvtc.edu', initials: 'GT', departmentId: 'dept-mc-adv-6', departmentName: '传媒学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T30606', isActive: true },
 
   // 游戏学院
-  { id: 'tch-gd-pro-1', name: '邹老师', email: 'zou.t1@bwvtc.edu', initials: 'ZT', departmentId: 'dept-gd-pro-1', departmentName: '游戏学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40101' },
-  { id: 'tch-gd-pro-2', name: '熊老师', email: 'xiong.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-gd-pro-2', departmentName: '游戏学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40102' },
-  { id: 'tch-gd-pro-3', name: '金老师', email: 'jin.t1@bwvtc.edu', initials: 'JT', departmentId: 'dept-gd-pro-3', departmentName: '游戏学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40103' },
-  { id: 'tch-gd-pro-4', name: '陆老师', email: 'lu.t1@bwvtc.edu', initials: 'LT', departmentId: 'dept-gd-pro-4', departmentName: '游戏学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40104' },
-  { id: 'tch-gd-pro-5', name: '苏老师', email: 'su.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-gd-pro-5', departmentName: '游戏学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40105' },
-  { id: 'tch-gd-adv-1', name: '丁老师', email: 'ding.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-gd-adv-1', departmentName: '游戏学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40601' },
-  { id: 'tch-gd-adv-2', name: '程老师', email: 'cheng.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-gd-adv-2', departmentName: '游戏学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40602' },
-  { id: 'tch-gd-adv-3', name: '傅老师', email: 'fu.t1@bwvtc.edu', initials: 'FT', departmentId: 'dept-gd-adv-3', departmentName: '游戏学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40603' },
-  { id: 'tch-gd-adv-4', name: '沈老师', email: 'shen.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-gd-adv-4', departmentName: '游戏学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40604' },
-  { id: 'tch-gd-adv-5', name: '范老师', email: 'fan.t1@bwvtc.edu', initials: 'FT', departmentId: 'dept-gd-adv-5', departmentName: '游戏学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40605' },
-  { id: 'tch-gd-adv-6', name: '彭老师', email: 'peng.t1@bwvtc.edu', initials: 'PT', departmentId: 'dept-gd-adv-6', departmentName: '游戏学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40606' },
+  { id: 'tch-gd-pro-1', name: '邹老师', email: 'zou.t1@bwvtc.edu', initials: 'ZT', departmentId: 'dept-gd-pro-1', departmentName: '游戏学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40101', isActive: true },
+  { id: 'tch-gd-pro-2', name: '熊老师', email: 'xiong.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-gd-pro-2', departmentName: '游戏学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40102', isActive: true },
+  { id: 'tch-gd-pro-3', name: '金老师', email: 'jin.t1@bwvtc.edu', initials: 'JT', departmentId: 'dept-gd-pro-3', departmentName: '游戏学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40103', isActive: true },
+  { id: 'tch-gd-pro-4', name: '陆老师', email: 'lu.t1@bwvtc.edu', initials: 'LT', departmentId: 'dept-gd-pro-4', departmentName: '游戏学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40104', isActive: true },
+  { id: 'tch-gd-pro-5', name: '苏老师', email: 'su.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-gd-pro-5', departmentName: '游戏学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40105', isActive: true },
+  { id: 'tch-gd-adv-1', name: '丁老师', email: 'ding.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-gd-adv-1', departmentName: '游戏学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40601', isActive: true },
+  { id: 'tch-gd-adv-2', name: '程老师', email: 'cheng.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-gd-adv-2', departmentName: '游戏学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40602', isActive: true },
+  { id: 'tch-gd-adv-3', name: '傅老师', email: 'fu.t1@bwvtc.edu', initials: 'FT', departmentId: 'dept-gd-adv-3', departmentName: '游戏学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40603', isActive: true },
+  { id: 'tch-gd-adv-4', name: '沈老师', email: 'shen.t1@bwvtc.edu', initials: 'ST', departmentId: 'dept-gd-adv-4', departmentName: '游戏学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40604', isActive: true },
+  { id: 'tch-gd-adv-5', name: '范老师', email: 'fan.t1@bwvtc.edu', initials: 'FT', departmentId: 'dept-gd-adv-5', departmentName: '游戏学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40605', isActive: true },
+  { id: 'tch-gd-adv-6', name: '彭老师', email: 'peng.t1@bwvtc.edu', initials: 'PT', departmentId: 'dept-gd-adv-6', departmentName: '游戏学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T40606', isActive: true },
 
   // 鸿蒙学院
-  { id: 'tch-hm-pro-1', name: '卢老师', email: 'lu.t2@bwvtc.edu', initials: 'LT', departmentId: 'dept-hm-pro-1', departmentName: '鸿蒙学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50101' },
-  { id: 'tch-hm-pro-2', name: '薛老师', email: 'xue.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-hm-pro-2', departmentName: '鸿蒙学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50102' },
-  { id: 'tch-hm-pro-3', name: '康老师', email: 'kang.t1@bwvtc.edu', initials: 'KT', departmentId: 'dept-hm-pro-3', departmentName: '鸿蒙学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50103' },
-  { id: 'tch-hm-pro-4', name: '贺老师', email: 'he.t2@bwvtc.edu', initials: 'HT', departmentId: 'dept-hm-pro-4', departmentName: '鸿蒙学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50104' },
-  { id: 'tch-hm-pro-5', name: '莫老师', email: 'mo.t1@bwvtc.edu', initials: 'MT', departmentId: 'dept-hm-pro-5', departmentName: '鸿蒙学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50105' },
-  { id: 'tch-hm-adv-1', name: '孔老师', email: 'kong.t1@bwvtc.edu', initials: 'KT', departmentId: 'dept-hm-adv-1', departmentName: '鸿蒙学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50601' },
-  { id: 'tch-hm-adv-2', name: '毛老师', email: 'mao.t1@bwvtc.edu', initials: 'MT', departmentId: 'dept-hm-adv-2', departmentName: '鸿蒙学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50602' },
-  { id: 'tch-hm-adv-3', name: '尹老师', email: 'yin.t1@bwvtc.edu', initials: 'YT', departmentId: 'dept-hm-adv-3', departmentName: '鸿蒙学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50603' },
-  { id: 'tch-hm-adv-4', name: '姜老师', email: 'jiang.t2@bwvtc.edu', initials: 'JT', departmentId: 'dept-hm-adv-4', departmentName: '鸿蒙学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50604' },
-  { id: 'tch-hm-adv-5', name: '戴老师', email: 'dai.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-hm-adv-5', departmentName: '鸿蒙学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50605' },
-  { id: 'tch-hm-adv-6', name: '崔老师', email: 'cui.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-hm-adv-6', departmentName: '鸿蒙学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50606' },
+  { id: 'tch-hm-pro-1', name: '卢老师', email: 'lu.t2@bwvtc.edu', initials: 'LT', departmentId: 'dept-hm-pro-1', departmentName: '鸿蒙学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50101', isActive: true },
+  { id: 'tch-hm-pro-2', name: '薛老师', email: 'xue.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-hm-pro-2', departmentName: '鸿蒙学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50102', isActive: true },
+  { id: 'tch-hm-pro-3', name: '康老师', email: 'kang.t1@bwvtc.edu', initials: 'KT', departmentId: 'dept-hm-pro-3', departmentName: '鸿蒙学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50103', isActive: true },
+  { id: 'tch-hm-pro-4', name: '贺老师', email: 'he.t2@bwvtc.edu', initials: 'HT', departmentId: 'dept-hm-pro-4', departmentName: '鸿蒙学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50104', isActive: true },
+  { id: 'tch-hm-pro-5', name: '莫老师', email: 'mo.t1@bwvtc.edu', initials: 'MT', departmentId: 'dept-hm-pro-5', departmentName: '鸿蒙学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50105', isActive: true },
+  { id: 'tch-hm-adv-1', name: '孔老师', email: 'kong.t1@bwvtc.edu', initials: 'KT', departmentId: 'dept-hm-adv-1', departmentName: '鸿蒙学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50601', isActive: true },
+  { id: 'tch-hm-adv-2', name: '毛老师', email: 'mao.t1@bwvtc.edu', initials: 'MT', departmentId: 'dept-hm-adv-2', departmentName: '鸿蒙学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50602', isActive: true },
+  { id: 'tch-hm-adv-3', name: '尹老师', email: 'yin.t1@bwvtc.edu', initials: 'YT', departmentId: 'dept-hm-adv-3', departmentName: '鸿蒙学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50603', isActive: true },
+  { id: 'tch-hm-adv-4', name: '姜老师', email: 'jiang.t2@bwvtc.edu', initials: 'JT', departmentId: 'dept-hm-adv-4', departmentName: '鸿蒙学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50604', isActive: true },
+  { id: 'tch-hm-adv-5', name: '戴老师', email: 'dai.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-hm-adv-5', departmentName: '鸿蒙学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50605', isActive: true },
+  { id: 'tch-hm-adv-6', name: '崔老师', email: 'cui.t1@bwvtc.edu', initials: 'CT', departmentId: 'dept-hm-adv-6', departmentName: '鸿蒙学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T50606', isActive: true },
 
   // 大数据学院
-  { id: 'tch-bd-pro-1', name: '任老师', email: 'ren.t1@bwvtc.edu', initials: 'RT', departmentId: 'dept-bd-pro-1', departmentName: '大数据学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60101' },
-  { id: 'tch-bd-pro-2', name: '魏老师', email: 'wei.t1@bwvtc.edu', initials: 'WT', departmentId: 'dept-bd-pro-2', departmentName: '大数据学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60102' },
-  { id: 'tch-bd-pro-3', name: '白老师', email: 'bai.t1@bwvtc.edu', initials: 'BT', departmentId: 'dept-bd-pro-3', departmentName: '大数据学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60103' },
-  { id: 'tch-bd-pro-4', name: '萧老师', email: 'xiao.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-bd-pro-4', departmentName: '大数据学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60104' },
-  { id: 'tch-bd-pro-5', name: '田老师', email: 'tian.t1@bwvtc.edu', initials: 'TT', departmentId: 'dept-bd-pro-5', departmentName: '大数据学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60105' },
-  { id: 'tch-bd-adv-1', name: '董老师', email: 'dong.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-bd-adv-1', departmentName: '大数据学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60601' },
-  { id: 'tch-bd-adv-2', name: '贾老师', email: 'jia.t1@bwvtc.edu', initials: 'JT', departmentId: 'dept-bd-adv-2', departmentName: '大数据学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60602' },
-  { id: 'tch-bd-adv-3', name: '苗老师', email: 'miao.t1@bwvtc.edu', initials: 'MT', departmentId: 'dept-bd-adv-3', departmentName: '大数据学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60603' },
-  { id: 'tch-bd-adv-4', name: '段老师', email: 'duan.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-bd-adv-4', departmentName: '大数据学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60604' },
-  { id: 'tch-bd-adv-5', name: '黎老师', email: 'li.t2@bwvtc.edu', initials: 'LT', departmentId: 'dept-bd-adv-5', departmentName: '大数据学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60605' },
-  { id: 'tch-bd-adv-6', name: '纪老师', email: 'ji.t1@bwvtc.edu', initials: 'JT', departmentId: 'dept-bd-adv-6', departmentName: '大数据学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60606' },
+  { id: 'tch-bd-pro-1', name: '任老师', email: 'ren.t1@bwvtc.edu', initials: 'RT', departmentId: 'dept-bd-pro-1', departmentName: '大数据学院 · 专业一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60101', isActive: true },
+  { id: 'tch-bd-pro-2', name: '魏老师', email: 'wei.t1@bwvtc.edu', initials: 'WT', departmentId: 'dept-bd-pro-2', departmentName: '大数据学院 · 专业二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60102', isActive: true },
+  { id: 'tch-bd-pro-3', name: '白老师', email: 'bai.t1@bwvtc.edu', initials: 'BT', departmentId: 'dept-bd-pro-3', departmentName: '大数据学院 · 专业三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60103', isActive: true },
+  { id: 'tch-bd-pro-4', name: '萧老师', email: 'xiao.t1@bwvtc.edu', initials: 'XT', departmentId: 'dept-bd-pro-4', departmentName: '大数据学院 · 专业四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60104', isActive: true },
+  { id: 'tch-bd-pro-5', name: '田老师', email: 'tian.t1@bwvtc.edu', initials: 'TT', departmentId: 'dept-bd-pro-5', departmentName: '大数据学院 · 专业五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60105', isActive: true },
+  { id: 'tch-bd-adv-1', name: '董老师', email: 'dong.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-bd-adv-1', departmentName: '大数据学院 · 专高一', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60601', isActive: true },
+  { id: 'tch-bd-adv-2', name: '贾老师', email: 'jia.t1@bwvtc.edu', initials: 'JT', departmentId: 'dept-bd-adv-2', departmentName: '大数据学院 · 专高二', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60602', isActive: true },
+  { id: 'tch-bd-adv-3', name: '苗老师', email: 'miao.t1@bwvtc.edu', initials: 'MT', departmentId: 'dept-bd-adv-3', departmentName: '大数据学院 · 专高三', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60603', isActive: true },
+  { id: 'tch-bd-adv-4', name: '段老师', email: 'duan.t1@bwvtc.edu', initials: 'DT', departmentId: 'dept-bd-adv-4', departmentName: '大数据学院 · 专高四', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60604', isActive: true },
+  { id: 'tch-bd-adv-5', name: '黎老师', email: 'li.t2@bwvtc.edu', initials: 'LT', departmentId: 'dept-bd-adv-5', departmentName: '大数据学院 · 专高五', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60605', isActive: true },
+  { id: 'tch-bd-adv-6', name: '纪老师', email: 'ji.t1@bwvtc.edu', initials: 'JT', departmentId: 'dept-bd-adv-6', departmentName: '大数据学院 · 专高六', roleIds: ['role-lecturer'], roleName: '讲师', accessStatus: 'full', userType: 'staff', loginId: 'T60606', isActive: true },
 
 
   {
@@ -332,6 +361,8 @@ export const users: UserInfo[] = [
     grade: '2024级',
     classId: 'dept-fs-pro-1',
     className: '专业一',
+
+    isActive: true,
   },
   {
     id: 'stu-fs-pro1-002',
@@ -348,6 +379,8 @@ export const users: UserInfo[] = [
     grade: '2024级',
     classId: 'dept-fs-pro-1',
     className: '专业一',
+
+    isActive: true,
   },
   {
     id: 'stu-fs-adv1-001',
@@ -364,6 +397,8 @@ export const users: UserInfo[] = [
     grade: '2023级',
     classId: 'dept-fs-adv-1',
     className: '专高一',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -384,6 +419,8 @@ export const users: UserInfo[] = [
     grade: '2024级',
     classId: 'dept-cc-pro-2',
     className: '专业二',
+
+    isActive: true,
   },
   {
     id: 'stu-cc-adv3-001',
@@ -400,6 +437,8 @@ export const users: UserInfo[] = [
     grade: '2023级',
     classId: 'dept-cc-adv-3',
     className: '专高三',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -420,6 +459,8 @@ export const users: UserInfo[] = [
     grade: '2024级',
     classId: 'dept-gd-pro-3',
     className: '专业三',
+
+    isActive: true,
   },
   {
     id: 'stu-gd-adv2-001',
@@ -436,6 +477,8 @@ export const users: UserInfo[] = [
     grade: '2023级',
     classId: 'dept-gd-adv-2',
     className: '专高二',
+
+    isActive: true,
   },
 
   // ======================================================
@@ -456,6 +499,8 @@ export const users: UserInfo[] = [
     grade: '2024级',
     classId: 'dept-bd-pro-5',
     className: '专业五',
+
+    isActive: true,
   },
 ];
 

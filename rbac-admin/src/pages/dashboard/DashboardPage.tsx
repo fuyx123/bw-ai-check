@@ -3,12 +3,11 @@ import { Row, Col, Card, Statistic, Table, Tag } from 'antd';
 import {
   TeamOutlined,
   ApartmentOutlined,
-  SolutionOutlined,
   SafetyOutlined,
   BookOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { flatDepartmentList } from '../../mocks/data/departments';
+import { flattenDepartments } from '../../mocks/data/departments';
 import { users } from '../../mocks/data/users';
 import { roles } from '../../mocks/data/roles';
 import { positions } from '../../mocks/data/positions';
@@ -37,12 +36,13 @@ const DashboardPage: React.FC = () => {
 
   const staffCount  = users.filter((u) => u.userType === 'staff').length;
   const studentCount = users.filter((u) => u.userType === 'student').length;
-  const deptCount   = flatDepartmentList.length;
+  const deptCount   = flattenDepartments().length;
 
   // 各学院班级数量汇总
+  const flatDepts = flattenDepartments();
   const collegeRows = colleges.map((c) => {
-    const proClasses = flatDepartmentList.filter((d) => d.parentId === c.proId).length;
-    const advClasses = flatDepartmentList.filter((d) => d.parentId === c.advId).length;
+    const proClasses = flatDepts.filter((d: any) => d.parentId === c.proId).length;
+    const advClasses = flatDepts.filter((d: any) => d.parentId === c.advId).length;
     const proDirector = users.find((u) => u.departmentId === c.proId);
     const advDirector = users.find((u) => u.departmentId === c.advId);
     return {

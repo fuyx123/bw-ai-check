@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Button, Space, message, Image, Empty } from 'antd';
+import { Upload, Button, Space, message, Image } from 'antd';
 import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { UploadFile, RcFile } from 'antd/es/upload/interface';
 
@@ -53,9 +53,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
       if (!file.url && file.originFileObj) {
         return {
           ...file,
-          status: 'done',
+          status: 'done' as const,
           url: URL.createObjectURL(file.originFileObj),
-        };
+        } as UploadFile;
       }
       return file;
     });
