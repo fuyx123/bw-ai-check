@@ -219,10 +219,6 @@ const LoginPage: React.FC = () => {
               />
             </Form.Item>
 
-            <Form.Item name="remember" valuePropName="checked">
-              <Checkbox>记住 30 天</Checkbox>
-            </Form.Item>
-
             <Form.Item>
               <Button
                 type="primary"

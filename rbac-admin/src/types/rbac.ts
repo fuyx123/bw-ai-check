@@ -3,7 +3,7 @@
 export type DataScope = 'school' | 'college' | 'major' | 'class';
 export type DepartmentStatus = 'operational';
 export type AccessStatus = 'full' | 'partial' | 'inactive';
-export type DepartmentLevel = 'university' | 'college' | 'major' | 'class';
+export type DepartmentLevel = 'university' | 'college' | 'stage' | 'major' | 'class';
 export type MenuItemType = 'menu' | 'button';
 export type UserType = 'student' | 'staff';
 
