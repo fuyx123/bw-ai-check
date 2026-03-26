@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
-import { Modal, Form, Input, Select, Switch, Divider, Spin } from 'antd';
+import React, { useEffect, useMemo } from 'react';
+import { Modal, Form, Input, Select, TreeSelect, Switch, Divider, Spin } from 'antd';
 import type { FormInstance } from 'antd/es/form';
+import type { DataNode } from 'antd/es/tree';
 import { useRoleStore } from '../../stores/roleStore';
 import { useDepartmentStore } from '../../stores/departmentStore';
 import FileUpload from '../common/FileUpload';
-import type { UserInfo } from '../../types/rbac';
+import type { UserInfo, Department } from '../../types/rbac';
 
 interface UserFormModalProps {
   mode: 'add' | 'edit';
@@ -20,6 +21,23 @@ interface UserFormModalProps {
  * 用户表单对话框组件
  * 支持新增和编辑两种模式，动态处理学生/教职工差异字段
  */
+/**
+ * 将树形部门数据转换为 TreeSelect 需要的格式
+ */
+function convertDepartmentsToTreeData(
+  departments: Department[],
+  prefix = ''
+): DataNode[] {
+  return departments.map((dept) => ({
+    key: dept.id,
+    title: `${prefix}${dept.name}`,
+    value: dept.id,
+    children: dept.children && dept.children.length > 0
+      ? convertDepartmentsToTreeData(dept.children, prefix + '  ')
+      : undefined,
+  }));
+}
+
 const UserFormModal: React.FC<UserFormModalProps> = ({
   mode,
   visible,
@@ -30,8 +48,14 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   onSubmit,
 }) => {
   const roles = useRoleStore((s) => s.roles);
-  const departments = useDepartmentStore((s) => s.flatDepartments);
+  const allDepartments = useDepartmentStore((s) => s.departments);
+  const flatDepartments = useDepartmentStore((s) => s.flatDepartments);
   const userType = Form.useWatch('userType', form) || 'staff';
+
+  // 转换树形结构用于 TreeSelect 显示
+  const departmentTreeData = useMemo(() => {
+    return convertDepartmentsToTreeData(allDepartments);
+  }, [allDepartments]);
 
   // 初始化表单数据
   useEffect(() => {
@@ -145,13 +169,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             label="所属部门"
             rules={[{ required: true, message: '请选择部门' }]}
           >
-            <Select placeholder="选择部门">
-              {departments.map((dept) => (
-                <Select.Option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </Select.Option>
-              ))}
-            </Select>
+            <TreeSelect
+              placeholder="选择部门"
+              treeData={departmentTreeData}
+              treeDefaultExpandAll={false}
+              showSearch
+              style={{ width: '100%' }}
+            />
           </Form.Item>
 
           {/* 教职工角色选择 */}
@@ -200,15 +224,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                 label="班级ID"
                 rules={[{ required: true, message: '请选择班级ID' }]}
               >
-                <Select placeholder="选择班级">
-                  {departments
-                    .filter((d) => d.level === 'major')
-                    .map((dept) => (
-                      <Select.Option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </Select.Option>
-                    ))}
-                </Select>
+                <TreeSelect
+                  placeholder="选择班级"
+                  treeData={departmentTreeData}
+                  treeDefaultExpandAll={false}
+                  showSearch
+                  style={{ width: '100%' }}
+                />
               </Form.Item>
             </>
           )}
