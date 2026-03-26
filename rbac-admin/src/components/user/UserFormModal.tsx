@@ -17,27 +17,29 @@ interface UserFormModalProps {
   onSubmit: (values: Partial<UserInfo>) => void;
 }
 
+interface DepartmentNode extends DataNode {
+  value?: string;
+}
+
 /**
  * 用户表单对话框组件
  * 支持新增和编辑两种模式，动态处理学生/教职工差异字段
  */
 /**
  * 将树形部门数据转换为 TreeSelect 需要的格式
- * 同时保留原始部门名称用于搜索
  */
 function convertDepartmentsToTreeData(
   departments: Department[],
   prefix = ''
-): (DataNode & { deptName?: string })[] {
+): DepartmentNode[] {
   return departments.map((dept) => ({
     key: dept.id,
     title: `${prefix}${dept.name}`,
     value: dept.id,
-    deptName: dept.name, // 保留原始部门名称用于搜索
     children: dept.children && dept.children.length > 0
       ? convertDepartmentsToTreeData(dept.children, prefix + '  ')
       : undefined,
-  }));
+  } as DepartmentNode));
 }
 
 const UserFormModal: React.FC<UserFormModalProps> = ({
