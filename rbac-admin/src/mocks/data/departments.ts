@@ -131,8 +131,8 @@ function makeCollege(
 export const departments: Department[] = [
   {
     id: 'dept-root',
-    name: '巴威职业技术学院',
-    code: 'BWVTC',
+    name: '北京八维研修学院',
+    code: 'BWYX',
     parentId: null,
     level: 'university',
     leader: { name: '王校长', title: '校长' },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Row,
   Col,
@@ -7,6 +7,7 @@ import {
   Space,
   Avatar,
   Select,
+  TreeSelect,
   Tag,
   Pagination,
   Segmented,
@@ -29,18 +30,72 @@ import { useDepartmentStore } from '../../stores/departmentStore';
 import { useRoleStore } from '../../stores/roleStore';
 import StatusTag from '../../components/common/StatusTag';
 import UserFormModal from '../../components/user/UserFormModal';
-import type { UserInfo, UserType } from '../../types/rbac';
+import type { Department, Role, UserInfo, UserType } from '../../types/rbac';
+
+interface DepartmentTreeNode {
+  key: string;
+  title: string;
+  value: string;
+  children?: DepartmentTreeNode[];
+}
+
+function convertDepartmentsToTreeData(
+  departments: Department[],
+  prefix = ''
+): DepartmentTreeNode[] {
+  return departments.map((department) => ({
+    key: department.id,
+    title: `${prefix}${department.name}`,
+    value: department.id,
+    children: department.children?.length
+      ? convertDepartmentsToTreeData(department.children, `${prefix}  `)
+      : undefined,
+  }));
+}
+
+const dataScopeLabelMap = {
+  school: '学校级角色',
+  college: '院级角色',
+  major: '专业级角色',
+  class: '班级级角色',
+} as const;
+
+const dataScopeOrder = ['school', 'college', 'major', 'class'] as const;
+
+function buildRoleFilterOptions(roles: Role[]) {
+  return dataScopeOrder
+    .map((scope) => {
+      const scopedRoles = roles
+        .filter((role) => role.dataScope === scope)
+        .sort((left, right) => left.name.localeCompare(right.name, 'zh-CN'));
+
+      if (scopedRoles.length === 0) {
+        return null;
+      }
+
+      return {
+        label: dataScopeLabelMap[scope],
+        options: scopedRoles.map((role) => ({
+          label: role.name,
+          value: role.id,
+        })),
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+}
 
 const UserPage: React.FC = () => {
   const [form] = Form.useForm();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingUser, setEditingUser] = useState<UserInfo | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
 
   const {
     filteredUsers,
     filters,
     pagination,
+    totalActive,
     fetchUsers,
     setFilter,
     clearFilters,
@@ -51,12 +106,39 @@ const UserPage: React.FC = () => {
     deleteUser,
   } = useUserStore();
 
+  const departments = useDepartmentStore((s) => s.departments);
   const flattenDepartments = useDepartmentStore((s) => s.flatDepartments);
+  const fetchDepartments = useDepartmentStore((s) => s.fetchDepartments);
   const roles = useRoleStore((s) => s.roles);
+  const fetchRoles = useRoleStore((s) => s.fetchRoles);
+
+  const departmentTreeData = useMemo(
+    () => convertDepartmentsToTreeData(departments),
+    [departments]
+  );
+
+  const departmentNameMap = useMemo(
+    () => new Map(flattenDepartments.map((department) => [department.id, department.name])),
+    [flattenDepartments]
+  );
+
+  const roleFilterOptions = useMemo(
+    () => buildRoleFilterOptions(roles),
+    [roles]
+  );
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    void Promise.all([fetchUsers(), fetchDepartments(), fetchRoles()]);
+  }, [fetchDepartments, fetchRoles, fetchUsers]);
+
+  const ensureReferenceData = async () => {
+    setModalLoading(true);
+    try {
+      await Promise.all([fetchDepartments(), fetchRoles()]);
+    } finally {
+      setModalLoading(false);
+    }
+  };
 
   const roleTagColor: Record<string, string> = {
     校长: '#f5222d',
@@ -81,7 +163,8 @@ const UserPage: React.FC = () => {
   };
 
   // 打开新增用户对话框
-  const openAddUserModal = () => {
+  const openAddUserModal = async () => {
+    await ensureReferenceData();
     setEditingUser(null);
     setModalMode('add');
     form.resetFields();
@@ -89,23 +172,28 @@ const UserPage: React.FC = () => {
   };
 
   // 打开编辑用户对话框
-  const openEditUserModal = (user: UserInfo) => {
+  const openEditUserModal = async (user: UserInfo) => {
+    await ensureReferenceData();
     setEditingUser(user);
     setModalMode('edit');
     setModalOpen(true);
   };
 
   // 提交用户表单
-  const handleUserSubmit = (values: Partial<UserInfo>) => {
-    if (modalMode === 'edit' && editingUser) {
-      updateUser(editingUser.id, values);
-      message.success(`已更新用户「${values.name}」`);
-    } else {
-      addUser(values);
-      message.success(`已创建用户「${values.name}」`);
+  const handleUserSubmit = async (values: Partial<UserInfo>) => {
+    try {
+      if (modalMode === 'edit' && editingUser) {
+        await updateUser(editingUser.id, values);
+        message.success(`已更新用户「${values.name}」`);
+      } else {
+        await addUser(values);
+        message.success(`已创建用户「${values.name}」`);
+      }
+      setModalOpen(false);
+      form.resetFields();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存用户失败');
     }
-    setModalOpen(false);
-    form.resetFields();
   };
 
   // 删除用户
@@ -116,17 +204,25 @@ const UserPage: React.FC = () => {
       okText: '确定删除',
       okType: 'danger',
       cancelText: '取消',
-      onOk() {
-        deleteUser(user.id);
-        message.success(`已删除用户「${user.name}」`);
+      async onOk() {
+        try {
+          await deleteUser(user.id);
+          message.success(`已删除用户「${user.name}」`);
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '删除用户失败');
+        }
       },
     });
   };
 
   // 禁用/启用用户
-  const handleToggleActive = (user: UserInfo) => {
-    updateUser(user.id, { isActive: !user.isActive });
-    message.success(user.isActive ? '已禁用用户' : '已启用用户');
+  const handleToggleActive = async (user: UserInfo) => {
+    try {
+      await updateUser(user.id, { isActive: !user.isActive });
+      message.success(user.isActive ? '已禁用用户' : '已启用用户');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '更新用户状态失败');
+    }
   };
 
   const columns = [
@@ -185,8 +281,10 @@ const UserPage: React.FC = () => {
       dataIndex: 'departmentName',
       key: 'department',
       width: 150,
-      render: (dept: string) => (
-        <span style={{ fontSize: 13 }}>{dept}</span>
+      render: (dept: string, record: UserInfo) => (
+        <span style={{ fontSize: 13 }}>
+          {dept || departmentNameMap.get(record.departmentId) || '—'}
+        </span>
       ),
     },
     {
@@ -244,7 +342,7 @@ const UserPage: React.FC = () => {
               type="text"
               icon={<EditOutlined />}
               size="small"
-              onClick={() => openEditUserModal(record)}
+              onClick={() => { void openEditUserModal(record); }}
             />
             <Dropdown menu={{ items }} trigger={['click']}>
               <Button type="text" icon={<MoreOutlined />} size="small" />
@@ -326,9 +424,9 @@ const UserPage: React.FC = () => {
           </div>
         </Col>
         <Col span={8}>
-          <div className="stat-card-dark" style={{ height: '100%' }}>
-            <div className="stat-label">总活跃教务人员</div>
-            <div className="stat-value">1,284</div>
+            <div className="stat-card-dark" style={{ height: '100%' }}>
+              <div className="stat-label">总活跃教务人员</div>
+            <div className="stat-value">{totalActive.toLocaleString()}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Avatar.Group size={24}>
                 <Avatar style={{ background: '#1677ff' }}>
@@ -370,27 +468,27 @@ const UserPage: React.FC = () => {
       {/* 筛选栏 */}
       <div className="filter-bar">
         <span className="filter-label">筛选</span>
-        <Select
+        <TreeSelect
           value={filters.departmentId || undefined}
           placeholder="所有部门"
-          style={{ width: 200 }}
+          style={{ width: 240 }}
+          treeData={departmentTreeData}
+          treeDefaultExpandAll={false}
+          showSearch
+          treeNodeFilterProp="title"
           allowClear
           onChange={(val) => setFilter({ departmentId: val || undefined })}
-          options={flattenDepartments.map((dept: any) => ({
-            label: dept.name,
-            value: dept.id,
-          }))}
+          notFoundContent="未找到匹配的部门"
         />
         <Select
           value={filters.roleId || undefined}
           placeholder="所有角色"
-          style={{ width: 160 }}
+          style={{ width: 200 }}
+          showSearch
+          optionFilterProp="label"
           allowClear
           onChange={(val) => setFilter({ roleId: val || undefined })}
-          options={roles.map((role) => ({
-            label: role.name,
-            value: role.id,
-          }))}
+          options={roleFilterOptions}
         />
         <div style={{ flex: 1 }} />
         <Button onClick={clearFilters}>清除</Button>
@@ -434,6 +532,7 @@ const UserPage: React.FC = () => {
           form.resetFields();
           setEditingUser(null);
         }}
+        loading={modalLoading}
         onSubmit={handleUserSubmit}
       />
     </div>

@@ -55,6 +55,49 @@ npm run dev
 
 启动后访问 http://localhost:5173
 
+### 后端 API
+
+项目已补充企业化分层后端，默认使用当前前端基线数据作为种子，便于先完成接口联调：
+
+```bash
+npm run server:build
+npm run server:start
+```
+
+默认监听 `http://localhost:3000`。
+
+本地联调建议：
+
+1. 终端一运行 `npm run server:dev`
+2. 终端二运行 `npm run dev`
+3. 前端开发服务器会把 `/api/*` 自动代理到 `http://localhost:3000`
+
+可用环境变量：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `API_PORT` | `3000` | API 端口 |
+| `API_HOST` | `0.0.0.0` | API 监听地址 |
+| `API_ALLOWED_ORIGINS` | `http://localhost:5173` | 允许跨域来源，多个值用逗号分隔 |
+| `API_TOKEN_SECRET` | `bw-ai-check-dev-secret` | 访问令牌签名密钥 |
+| `API_TOKEN_TTL_SECONDS` | `43200` | 令牌有效期（秒） |
+
+后端目录结构：
+
+```text
+server/
+├── src/
+│   ├── config/        # 运行配置
+│   ├── core/          # 应用装配 / 启动入口
+│   ├── data/          # 种子数据与内存存储
+│   ├── modules/       # 路由注册
+│   ├── services/      # 业务服务层
+│   └── shared/        # 鉴权 / 校验 / 路由 / HTTP 通用能力
+└── package.json       # CommonJS 运行配置
+```
+
+当前后端已覆盖认证、部门、用户、角色、菜单、岗位/岗位分类、职级、审计日志接口。
+
 ### 构建生产版本
 
 ```bash

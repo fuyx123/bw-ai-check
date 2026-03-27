@@ -17,18 +17,21 @@ const LoginPage: React.FC = () => {
     form.resetFields(['username', 'password']);
   };
 
-  const onFinish = (values: { username: string; password: string; remember: boolean }) => {
+  const onFinish = async (values: { username: string; password: string; remember: boolean }) => {
     setLoading(true);
-    setTimeout(() => {
-      const success = login(values.username, values.password, userType);
+    try {
+      const success = await login(values.username, values.password, userType);
       if (success) {
         message.success('登录成功');
         navigate('/dashboard', { replace: true });
       } else {
-        message.error(userType === 'student' ? '学号或密码错误' : '职工号/账号或密码错误');
+        message.error('账号或密码错误');
       }
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '登录失败');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const isStudent = userType === 'student';
@@ -191,12 +194,12 @@ const LoginPage: React.FC = () => {
           >
             <Form.Item
               name="username"
-              label={<span style={{ fontWeight: 500 }}>{isStudent ? '学号' : '职工号'}</span>}
-              rules={[{ required: true, message: `${isStudent ? '学号' : '职工号'}不能为空` }]}
+              label={<span style={{ fontWeight: 500 }}>{isStudent ? '学号 / 邮箱' : '职工号 / 邮箱'}</span>}
+              rules={[{ required: true, message: '登录账号不能为空' }]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#bbb' }} />}
-                placeholder={isStudent ? '请输入学号' : '请输入职工号'}
+                placeholder={isStudent ? '请输入学号或邮箱' : '请输入职工号或邮箱'}
                 style={{ borderRadius: 8, height: 46 }}
               />
             </Form.Item>
@@ -206,7 +209,6 @@ const LoginPage: React.FC = () => {
               label={<span style={{ fontWeight: 500 }}>密码</span>}
               rules={[
                 { required: true, message: '密码不能为空' },
-                { min: 6, message: '密码至少6位' },
               ]}
             >
               <Input.Password
@@ -253,18 +255,19 @@ const LoginPage: React.FC = () => {
             </div>
             {isStudent ? (
               <div style={{ fontSize: 12, color: '#999', lineHeight: 2 }}>
-                <div>全栈·专业一：<code>2024010101</code> / <code>123456</code></div>
-                <div>全栈·专业一：<code>2024010102</code> / <code>123456</code></div>
-                <div>全栈·专高一：<code>2023010601</code> / <code>123456</code></div>
-                <div>云计算·专业二：<code>2024020201</code> / <code>123456</code></div>
+                <div>当前环境支持学号或邮箱登录</div>
+                <div>学生：<code>student001</code> / <code>123456</code></div>
+                <div>也支持邮箱：<code>student001@seuu.edu</code> / <code>123456</code></div>
               </div>
             ) : (
               <div style={{ fontSize: 12, color: '#999', lineHeight: 2 }}>
-                <div>校长：<code>admin</code> / <code>admin123</code>（全部权限）</div>
-                <div>教务：<code>E002</code> / <code>123456</code>（成绩管理）</div>
-                <div>全栈专业主任：<code>E101</code> / <code>123456</code>（专业阶段）</div>
-                <div>全栈专高主任：<code>E102</code> / <code>123456</code>（专高阶段）</div>
-                <div>讲师（全栈专业一）：<code>T10101</code> / <code>123456</code></div>
+                <div>当前环境支持职工号或邮箱登录</div>
+                <div>管理员：<code>admin</code> / <code>123456</code></div>
+                <div>院长：<code>dean001</code> / <code>123456</code></div>
+                <div>教务：<code>academic001</code> / <code>123456</code></div>
+                <div>专业负责人：<code>major001</code> / <code>123456</code></div>
+                <div>讲师：<code>lecturer001</code> / <code>123456</code></div>
+                <div>行政：<code>office001</code> / <code>123456</code></div>
               </div>
             )}
           </div>

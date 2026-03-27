@@ -107,10 +107,10 @@ const MenuPage: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    form.validateFields().then((values) => {
+    form.validateFields().then(async (values) => {
       const menuParentId = values.parentId || null;
       if (editing) {
-        editMenu(editing.id, {
+        await editMenu(editing.id, {
           name: values.name,
           path: values.type === 'menu' ? values.path : '',
           icon: values.type === 'menu' ? values.icon : '',
@@ -122,7 +122,7 @@ const MenuPage: React.FC = () => {
         message.success(`已更新「${values.name}」`);
       } else {
         const newMenu: MenuItem = {
-          id: `menu-${Date.now()}`,
+          id: '',
           name: values.name,
           path: values.type === 'menu' ? values.path : '',
           icon: values.type === 'menu' ? (values.icon || '') : '',
@@ -131,11 +131,15 @@ const MenuPage: React.FC = () => {
           visible: values.visible,
           type: values.type,
         };
-        addMenu(newMenu);
+        await addMenu(newMenu);
         message.success(`已添加「${values.name}」`);
       }
       setModalOpen(false);
       form.resetFields();
+    }).catch((error) => {
+      if (error instanceof Error) {
+        message.error(error.message);
+      }
     });
   };
 
@@ -148,14 +152,19 @@ const MenuPage: React.FC = () => {
         okText: '确认删除',
         okType: 'danger',
         cancelText: '取消',
-        onOk: () => {
-          deleteMenu(item.id);
-          message.success(`已删除「${item.name}」`);
+        onOk: async () => {
+          try {
+            await deleteMenu(item.id);
+            message.success(`已删除「${item.name}」`);
+          } catch (error) {
+            message.error(error instanceof Error ? error.message : '删除菜单失败');
+          }
         },
       });
     } else {
-      deleteMenu(item.id);
-      message.success(`已删除「${item.name}」`);
+      deleteMenu(item.id)
+        .then(() => message.success(`已删除「${item.name}」`))
+        .catch((error) => message.error(error instanceof Error ? error.message : '删除菜单失败'));
     }
   };
 
@@ -225,15 +234,21 @@ const MenuPage: React.FC = () => {
       title: '状态',
       dataIndex: 'visible',
       key: 'visible',
-      width: 80,
-      render: (visible: boolean, record: MenuItem) => (
-        <Switch
-          size="small"
-          checked={visible}
-          onChange={(v) => editMenu(record.id, { visible: v })}
-        />
-      ),
-    },
+        width: 80,
+        render: (visible: boolean, record: MenuItem) => (
+          <Switch
+            size="small"
+            checked={visible}
+            onChange={async (v) => {
+              try {
+                await editMenu(record.id, { visible: v });
+              } catch (error) {
+                message.error(error instanceof Error ? error.message : '更新菜单状态失败');
+              }
+            }}
+          />
+        ),
+      },
     {
       title: '操作',
       key: 'actions',
@@ -348,7 +363,11 @@ const MenuPage: React.FC = () => {
             name="parentId"
             label="上级菜单"
           >
-            <Select options={parentOptions} />
+            <Select
+              options={parentOptions}
+              showSearch
+              optionFilterProp="label"
+            />
           </Form.Item>
 
           <Form.Item

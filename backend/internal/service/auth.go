@@ -2,22 +2,32 @@ package service
 
 import (
 	"fmt"
+	"strings"
 
-	"golang.org/x/crypto/bcrypt"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
+
 	"bw-ai-check/backend/internal/dto"
 	"bw-ai-check/backend/internal/model"
+	"bw-ai-check/backend/internal/repository"
+	"bw-ai-check/backend/pkg/crypto"
 	jwtpkg "bw-ai-check/backend/pkg/jwt"
 )
 
 // AuthService 认证服务
 type AuthService struct {
-	db *gorm.DB
+	db       *gorm.DB
+	userRepo *repository.UserRepository
+	logger   *zap.Logger
 }
 
 // NewAuthService 创建认证服务
-func NewAuthService(db *gorm.DB) *AuthService {
-	return &AuthService{db: db}
+func NewAuthService(db *gorm.DB, userRepo *repository.UserRepository, logger *zap.Logger) *AuthService {
+	return &AuthService{
+		db:       db,
+		userRepo: userRepo,
+		logger:   logger,
+	}
 }
 
 // LoginResp 登录响应
@@ -50,25 +60,29 @@ type UserVO struct {
 
 // Login 用户登录
 func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
-	// 1. 查询用户
-	user := &model.User{}
-	err := s.db.Where("login_id = ? AND user_type = ?", req.LoginID, req.UserType).
-		Preload("Roles").
-		First(user).Error
+	// 1. 查询用户（通过 repository）
+	user, err := s.userRepo.FindByLoginID(req.LoginID, req.UserType)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("invalid login credentials")
-		}
-		return nil, fmt.Errorf("failed to query user: %w", err)
+		s.logger.Warn("User not found or query error",
+			zap.String("loginID", req.LoginID),
+			zap.String("userType", req.UserType),
+			zap.Error(err))
+		return nil, fmt.Errorf("invalid login credentials")
 	}
 
-	// 2. 验证密码
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, fmt.Errorf("invalid password")
+	// 2. 验证密码（使用加盐验证）
+	if err := crypto.VerifyPassword(user.PasswordHash, req.Password); err != nil {
+		s.logger.Warn("Password verification failed",
+			zap.String("userID", user.ID),
+			zap.String("loginID", resolveLoginIdentifier(user)))
+		return nil, fmt.Errorf("invalid login credentials")
 	}
 
 	// 3. 检查账户是否激活
 	if !user.IsActive {
+		s.logger.Warn("Account is not active",
+			zap.String("userID", user.ID),
+			zap.String("loginID", resolveLoginIdentifier(user)))
 		return nil, fmt.Errorf("account is not active")
 	}
 
@@ -95,13 +109,16 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 	// 6. 获取用户权限（菜单 ID）
 	permissions, err := s.getUserPermissions(roleID)
 	if err != nil {
+		s.logger.Warn("Failed to get user permissions",
+			zap.String("roleID", roleID),
+			zap.Error(err))
 		return nil, fmt.Errorf("failed to get permissions: %w", err)
 	}
 
 	// 7. 生成 JWT Token
 	claims := jwtpkg.Claims{
 		UserID:       user.ID,
-		LoginID:      user.LoginID,
+		LoginID:      resolveLoginIdentifier(user),
 		UserType:     user.UserType,
 		DataScope:    dataScope,
 		RoleID:       roleID,
@@ -109,12 +126,20 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 	}
 	token, err := jwtpkg.GenerateToken(claims)
 	if err != nil {
+		s.logger.Error("Failed to generate token",
+			zap.String("userID", user.ID),
+			zap.Error(err))
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
 	// 8. 构建响应
 	userVO := s.modelToVO(user, dept)
 	userVO.DataScope = dataScope
+
+	s.logger.Info("User login successful",
+		zap.String("userID", user.ID),
+		zap.String("loginID", resolveLoginIdentifier(user)),
+		zap.String("userType", user.UserType))
 
 	return &LoginResp{
 		Token:       token,
@@ -125,15 +150,13 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 
 // GetMe 获取当前用户信息
 func (s *AuthService) GetMe(userID string) (*UserVO, error) {
-	user := &model.User{}
-	err := s.db.Where("id = ?", userID).
-		Preload("Roles").
-		First(user).Error
+	// 通过 repository 查询用户
+	user, err := s.userRepo.FindByID(userID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("user not found")
-		}
-		return nil, fmt.Errorf("failed to query user: %w", err)
+		s.logger.Warn("User not found",
+			zap.String("userID", userID),
+			zap.Error(err))
+		return nil, fmt.Errorf("user not found")
 	}
 
 	// 获取部门信息
@@ -150,6 +173,9 @@ func (s *AuthService) GetMe(userID string) (*UserVO, error) {
 
 	userVO := s.modelToVO(user, dept)
 	userVO.DataScope = dataScope
+
+	s.logger.Info("User info retrieved",
+		zap.String("userID", userID))
 
 	return &userVO, nil
 }
@@ -175,7 +201,7 @@ func (s *AuthService) modelToVO(user *model.User, dept *model.Department) UserVO
 		Avatar:         user.Avatar,
 		Initials:       user.Initials,
 		UserType:       user.UserType,
-		LoginID:        user.LoginID,
+		LoginID:        resolveLoginIdentifier(user),
 		DepartmentID:   user.DepartmentID,
 		DepartmentName: dept.Name,
 		AccessStatus:   user.AccessStatus,
@@ -195,4 +221,16 @@ func (s *AuthService) modelToVO(user *model.User, dept *model.Department) UserVO
 	}
 
 	return vo
+}
+
+func resolveLoginIdentifier(user *model.User) string {
+	if user == nil {
+		return ""
+	}
+
+	if loginID := strings.TrimSpace(user.LoginID); loginID != "" {
+		return loginID
+	}
+
+	return strings.TrimSpace(user.Email)
 }

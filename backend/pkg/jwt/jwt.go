@@ -23,17 +23,25 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-var signingKey = []byte("your-secret-key-change-me") // 应该从配置读取
+var (
+	signingKey      = []byte("") // 设置在 SetSigningKey
+	expireDuration  = 24 * time.Hour
+)
 
 // SetSigningKey 设置签名密钥（从配置读取）
 func SetSigningKey(key string) {
 	signingKey = []byte(key)
 }
 
+// SetExpireDuration 设置 token 过期时间（从配置读取）
+func SetExpireDuration(hours int) {
+	expireDuration = time.Duration(hours) * time.Hour
+}
+
 // GenerateToken 生成 JWT token
 func GenerateToken(claims Claims) (string, error) {
 	claims.RegisteredClaims = jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expireDuration)),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		NotBefore: jwt.NewNumericDate(time.Now()),
 		Issuer:    "bw-ai-check",

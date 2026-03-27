@@ -1,12 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Layout } from 'antd';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useAuthStore } from '../../stores/authStore';
+import { useMenuStore } from '../../stores/menuStore';
 
 const { Sider, Content } = Layout;
 
 const MainLayout: React.FC = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const fetchNavigationMenus = useMenuStore((state) => state.fetchNavigationMenus);
+  const clearMenus = useMenuStore((state) => state.clearMenus);
+
+  useEffect(() => {
+    clearMenus();
+    if (!isAuthenticated) {
+      return;
+    }
+
+    void fetchNavigationMenus().catch(() => {
+      clearMenus();
+    });
+  }, [clearMenus, fetchNavigationMenus, isAuthenticated]);
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider

@@ -89,6 +89,13 @@ type CreateRoleReq struct {
 	DataScope   string `json:"dataScope" binding:"required,oneof=school college major class"`
 }
 
+// UpdateRoleReq 更新角色基础信息
+type UpdateRoleReq struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	DataScope   *string `json:"dataScope" binding:"omitempty,oneof=school college major class"`
+}
+
 // UpdateRoleMenusReq 更新角色菜单请求
 type UpdateRoleMenusReq struct {
 	MenuIds []string `json:"menuIds" binding:"required"`
@@ -138,6 +145,25 @@ type UpdatePositionReq struct {
 	Level        *int    `json:"level"`
 	Description  *string `json:"description"`
 	Headcount    *int    `json:"headcount"`
+}
+
+// CreatePositionCategoryReq 创建岗位类别请求
+type CreatePositionCategoryReq struct {
+	Code        string `json:"code" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	Color       string `json:"color" binding:"required"`
+	Icon        string `json:"icon" binding:"required"`
+	SortOrder   int    `json:"sortOrder" binding:"required"`
+	Description string `json:"description"`
+}
+
+// UpdatePositionCategoryReq 更新岗位类别请求
+type UpdatePositionCategoryReq struct {
+	Name        *string `json:"name"`
+	Color       *string `json:"color"`
+	Icon        *string `json:"icon"`
+	SortOrder   *int    `json:"sortOrder"`
+	Description *string `json:"description"`
 }
 
 // ========== Grade Requests ==========

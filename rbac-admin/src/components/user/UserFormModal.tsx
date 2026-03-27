@@ -42,6 +42,40 @@ function convertDepartmentsToTreeData(
   } as DepartmentNode));
 }
 
+function convertClassTreeData(
+  departments: Department[],
+  prefix = ''
+): DepartmentNode[] {
+  return departments.flatMap((dept) => {
+    const children = dept.children && dept.children.length > 0
+      ? convertClassTreeData(dept.children, prefix + '  ')
+      : undefined;
+
+    if (dept.level !== 'class' && (!children || children.length === 0)) {
+      return [];
+    }
+
+    return [{
+      key: dept.id,
+      title: `${prefix}${dept.name}`,
+      value: dept.id,
+      disabled: dept.level !== 'class',
+      selectable: dept.level === 'class',
+      children,
+    } as DepartmentNode];
+  });
+}
+
+function buildDepartmentNameMap(departments: Department[], result = new Map<string, string>()) {
+  departments.forEach((dept) => {
+    result.set(dept.id, dept.name);
+    if (dept.children?.length) {
+      buildDepartmentNameMap(dept.children, result);
+    }
+  });
+  return result;
+}
+
 const UserFormModal: React.FC<UserFormModalProps> = ({
   mode,
   visible,
@@ -58,6 +92,14 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   // 转换树形结构用于 TreeSelect 显示
   const departmentTreeData = useMemo(() => {
     return convertDepartmentsToTreeData(allDepartments);
+  }, [allDepartments]);
+
+  const classTreeData = useMemo(() => {
+    return convertClassTreeData(allDepartments);
+  }, [allDepartments]);
+
+  const departmentNameMap = useMemo(() => {
+    return buildDepartmentNameMap(allDepartments);
   }, [allDepartments]);
 
   // 初始化表单数据
@@ -99,6 +141,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const title = mode === 'edit' ? `编辑用户 — ${user?.name}` : '新增用户';
   const okText = mode === 'edit' ? '保存' : '创建';
+
+  const handleClassChange = (value: string | undefined) => {
+    form.setFieldsValue({
+      classId: value,
+      className: value ? departmentNameMap.get(value) || '' : undefined,
+    });
+  };
 
   return (
     <Modal
@@ -177,6 +226,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
               treeData={departmentTreeData}
               treeDefaultExpandAll={false}
               showSearch
+              treeNodeFilterProp="title"
               allowClear
               style={{ width: '100%' }}
               notFoundContent="未找到匹配的部门"
@@ -190,13 +240,16 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
               label="角色"
               rules={[{ required: true, message: '请至少选择一个角色' }]}
             >
-              <Select mode="multiple" placeholder="选择角色（可多选）">
-                {roles.map((role) => (
-                  <Select.Option key={role.id} value={role.id}>
-                    {role.name}
-                  </Select.Option>
-                ))}
-              </Select>
+              <Select
+                mode="multiple"
+                placeholder="选择角色（可多选）"
+                showSearch
+                optionFilterProp="label"
+                options={roles.map((role) => ({
+                  label: role.name,
+                  value: role.id,
+                }))}
+              />
             </Form.Item>
           )}
 
@@ -218,23 +271,24 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
               <Form.Item
                 name="className"
-                label="班级名称"
-                rules={[{ required: true, message: '请输入班级名称' }]}
+                hidden
               >
-                <Input placeholder="如：计科2301" />
+                <Input />
               </Form.Item>
 
               <Form.Item
                 name="classId"
-                label="班级ID"
-                rules={[{ required: true, message: '请选择班级ID' }]}
+                label="班级"
+                rules={[{ required: true, message: '请选择班级' }]}
               >
                 <TreeSelect
                   placeholder="搜索班级名称..."
-                  treeData={departmentTreeData}
+                  treeData={classTreeData}
                   treeDefaultExpandAll={false}
                   showSearch
+                  treeNodeFilterProp="title"
                   allowClear
+                  onChange={(value) => handleClassChange(value as string | undefined)}
                   style={{ width: '100%' }}
                   notFoundContent="未找到匹配的班级"
                 />

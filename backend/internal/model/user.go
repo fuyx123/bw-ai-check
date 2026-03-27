@@ -16,7 +16,7 @@ type User struct {
 	Initials       *string       `gorm:"column:initials" json:"initials"`
 	UserType       string        `gorm:"column:user_type" json:"userType"` // student | staff
 	DepartmentID   string        `gorm:"column:department_id" json:"departmentId"`
-	DepartmentName string        `gorm:"-" json:"departmentName"` // 冗余字段，从 department 表关联
+	DepartmentName string        `gorm:"column:department_name;->;-:migration" json:"departmentName"` // 冗余字段，从 department 表关联
 	AccessStatus   string        `gorm:"column:access_status" json:"accessStatus"` // full | partial | inactive
 	IsActive       bool          `gorm:"column:is_active" json:"isActive"`
 	Grade          *string       `gorm:"column:grade" json:"grade"` // 学生专属

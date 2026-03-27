@@ -41,21 +41,21 @@ const Header: React.FC = () => {
     setProfileOpen(true);
   };
 
-  const handleProfileSave = () => {
-    profileForm.validateFields().then((values) => {
-      updateProfile(values);
+  const handleProfileSave = async () => {
+    profileForm.validateFields().then(async (values) => {
+      await updateProfile(values);
       message.success('个人信息已更新');
       setProfileOpen(false);
     });
   };
 
-  const handlePasswordSave = () => {
-    passwordForm.validateFields().then((values) => {
+  const handlePasswordSave = async () => {
+    passwordForm.validateFields().then(async (values) => {
       if (values.newPassword !== values.confirmPassword) {
         message.error('两次密码输入不一致');
         return;
       }
-      const ok = updatePassword(values.oldPassword, values.newPassword);
+      const ok = await updatePassword(values.oldPassword, values.newPassword);
       if (ok) {
         message.success('密码修改成功');
         setPasswordOpen(false);
@@ -72,8 +72,8 @@ const Header: React.FC = () => {
       content: '确定要退出登录吗？',
       okText: '退出',
       cancelText: '取消',
-      onOk: () => {
-        logout();
+      onOk: async () => {
+        await logout();
         navigate('/login', { replace: true });
       },
     });

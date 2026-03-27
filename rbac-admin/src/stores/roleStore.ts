@@ -1,84 +1,133 @@
 import { create } from 'zustand';
 import type { Role, DataScope } from '../types/rbac';
-import { roles as initialRoles } from '../mocks/data/roles';
+import {
+  createRole as createRoleRequest,
+  deleteRole as deleteRoleRequest,
+  fetchRoles,
+  updateRole as updateRoleRequest,
+  updateRoleMenus as updateRoleMenusRequest,
+} from '../services/roles';
 
 interface RoleState {
   roles: Role[];
   selectedRole: Role | null;
   loading: boolean;
-  fetchRoles: () => void;
+  fetchRoles: () => Promise<void>;
   selectRole: (id: string | null) => void;
-  addRole: (role: Role) => void;
-  editRole: (id: string, updates: Partial<Role>) => void;
-  deleteRole: (id: string) => void;
-  updateRolePermissions: (roleId: string, menuIds: string[]) => void;
-  updateRoleDataScope: (roleId: string, scope: DataScope) => void;
+  addRole: (role: Role) => Promise<void>;
+  editRole: (id: string, updates: Partial<Role>) => Promise<void>;
+  deleteRole: (id: string) => Promise<void>;
+  updateRolePermissions: (roleId: string, menuIds: string[]) => Promise<void>;
+  updateRoleDataScope: (roleId: string, scope: DataScope) => Promise<void>;
+  saveRoleAccess: (roleId: string, menuIds: string[], scope: DataScope) => Promise<Role>;
+}
+
+function sameMembers(left: string[], right: string[]) {
+  if (left.length !== right.length) return false;
+  const leftSet = new Set(left);
+  for (const item of right) {
+    if (!leftSet.has(item)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export const useRoleStore = create<RoleState>((set, get) => ({
-  roles: initialRoles,
+  roles: [],
   selectedRole: null,
   loading: false,
 
-  fetchRoles: () => {
-    set({ roles: initialRoles, loading: false });
+  fetchRoles: async () => {
+    set({ loading: true });
+    const roles = await fetchRoles();
+    const selectedId = get().selectedRole?.id;
+    set({
+      roles,
+      selectedRole: selectedId ? roles.find((role) => role.id === selectedId) ?? null : null,
+      loading: false,
+    });
   },
 
   selectRole: (id) => {
-    if (!id) {
-      set({ selectedRole: null });
-      return;
+    set({
+      selectedRole: id ? get().roles.find((role) => role.id === id) ?? null : null,
+    });
+  },
+
+  addRole: async (role) => {
+    const created = await createRoleRequest({
+      name: role.name,
+      description: role.description,
+      dataScope: role.dataScope,
+    });
+    const roles = [...get().roles, created];
+    set({ roles, selectedRole: created });
+  },
+
+  editRole: async (id, updates) => {
+    const updated = await updateRoleRequest(id, {
+      name: updates.name,
+      description: updates.description,
+      dataScope: updates.dataScope,
+    });
+    const roles = get().roles.map((role) => (role.id === id ? updated : role));
+    set({
+      roles,
+      selectedRole: get().selectedRole?.id === id ? updated : get().selectedRole,
+    });
+  },
+
+  deleteRole: async (id) => {
+    await deleteRoleRequest(id);
+    const roles = get().roles.filter((role) => role.id !== id);
+    set({
+      roles,
+      selectedRole: get().selectedRole?.id === id ? null : get().selectedRole,
+    });
+  },
+
+  updateRolePermissions: async (roleId, menuIds) => {
+    const updated = await updateRoleMenusRequest(roleId, menuIds);
+    const roles = get().roles.map((role) => (role.id === roleId ? updated : role));
+    set({
+      roles,
+      selectedRole: get().selectedRole?.id === roleId ? updated : get().selectedRole,
+    });
+  },
+
+  updateRoleDataScope: async (roleId, scope) => {
+    const updated = await updateRoleRequest(roleId, { dataScope: scope });
+    const roles = get().roles.map((role) => (role.id === roleId ? updated : role));
+    set({
+      roles,
+      selectedRole: get().selectedRole?.id === roleId ? updated : get().selectedRole,
+    });
+  },
+
+  saveRoleAccess: async (roleId, menuIds, scope) => {
+    const currentRole = get().roles.find((role) => role.id === roleId);
+    if (!currentRole) {
+      throw new Error('角色不存在');
     }
-    set({ selectedRole: get().roles.find((r) => r.id === id) ?? null });
-  },
 
-  addRole: (role) => {
-    set((s) => ({ roles: [...s.roles, role] }));
-  },
+    let updatedRole = currentRole;
+    const normalizedMenuIds = Array.from(new Set(menuIds));
 
-  editRole: (id, updates) => {
-    set((s) => {
-      const roles = s.roles.map((r) =>
-        r.id === id ? { ...r, ...updates } : r,
-      );
-      const selected =
-        s.selectedRole?.id === id
-          ? { ...s.selectedRole, ...updates }
-          : s.selectedRole;
-      return { roles, selectedRole: selected as Role | null };
+    if (!sameMembers(currentRole.permissions, normalizedMenuIds)) {
+      updatedRole = await updateRoleMenusRequest(roleId, normalizedMenuIds);
+    }
+
+    if (updatedRole.dataScope !== scope) {
+      updatedRole = await updateRoleRequest(roleId, { dataScope: scope });
+    }
+
+    const roles = get().roles.map((role) => (role.id === roleId ? updatedRole : role));
+    set({
+      roles,
+      selectedRole: get().selectedRole?.id === roleId ? updatedRole : get().selectedRole,
     });
-  },
 
-  deleteRole: (id) => {
-    set((s) => ({
-      roles: s.roles.filter((r) => r.id !== id),
-      selectedRole: s.selectedRole?.id === id ? null : s.selectedRole,
-    }));
-  },
-
-  updateRolePermissions: (roleId, menuIds) => {
-    set((s) => {
-      const roles = s.roles.map((r) =>
-        r.id === roleId ? { ...r, permissions: menuIds } : r,
-      );
-      const selected =
-        s.selectedRole?.id === roleId
-          ? { ...s.selectedRole, permissions: menuIds }
-          : s.selectedRole;
-      return { roles, selectedRole: selected as Role | null };
-    });
-  },
-
-  updateRoleDataScope: (roleId, scope) => {
-    set((s) => {
-      const roles = s.roles.map((r) =>
-        r.id === roleId ? { ...r, dataScope: scope } : r,
-      );
-      const selected =
-        s.selectedRole?.id === roleId
-          ? { ...s.selectedRole, dataScope: scope }
-          : s.selectedRole;
-      return { roles, selectedRole: selected as Role | null };
-    });
+    return updatedRole;
   },
 }));

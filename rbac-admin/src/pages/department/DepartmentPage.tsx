@@ -55,7 +55,7 @@ const DepartmentPage: React.FC = () => {
     deleteDepartment,
   } = useDepartmentStore();
 
-  const { positions } = usePositionStore();
+  const { positions, fetchPositions } = usePositionStore();
   const positionOptions = positions.map((p) => ({ value: p.name, label: `${p.name}（${p.code}）` }));
 
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([
@@ -74,15 +74,28 @@ const DepartmentPage: React.FC = () => {
 
   useEffect(() => {
     fetchDepartments();
-  }, [fetchDepartments]);
+    fetchPositions();
+  }, [fetchDepartments, fetchPositions]);
 
   useEffect(() => {
     if (!selectedDepartment && flatDepartments.length > 0) {
-      selectDepartment('dept-fs');
+      const defaultDepartment =
+        flatDepartments.find((dept) => dept.id === 'dept-fs')?.id ||
+        departments[0]?.children?.[0]?.id ||
+        departments[0]?.id ||
+        flatDepartments[0]?.id;
+      if (defaultDepartment) {
+        selectDepartment(defaultDepartment);
+      }
     }
-  }, [selectedDepartment, flatDepartments, selectDepartment]);
+  }, [selectedDepartment, flatDepartments, departments, selectDepartment]);
 
-  const selectedId = selectedDepartment?.id || 'dept-fs';
+  const selectedId =
+    selectedDepartment?.id ||
+    flatDepartments.find((dept) => dept.id === 'dept-fs')?.id ||
+    departments[0]?.children?.[0]?.id ||
+    departments[0]?.id ||
+    '';
 
   // ===== 构建树 =====
   const buildTreeData = (depts: Department[]): DataNode[] => {
@@ -107,15 +120,23 @@ const DepartmentPage: React.FC = () => {
   const totalStaff = currentDepts.reduce((sum, d) => sum + d.staffCount, 0);
 
   const selectedDeptInfo =
-    selectedDepartment || flatDepartments.find((d) => d.id === 'dept-fs');
+    selectedDepartment || flatDepartments.find((d) => d.id === selectedId) || flatDepartments[0];
 
   // ===== 导出 Excel =====
   const handleExport = useCallback(() => {
+    const levelLabelMap: Record<string, string> = {
+      university: '学校',
+      college: '学院',
+      stage: '阶段',
+      major: '专业',
+      class: '班级',
+    };
+
     const rows = flatDepartments.map((d) => ({
       部门ID: d.id,
       部门名称: d.name,
       部门编码: d.code,
-      层级: d.level === 'university' ? '学校' : d.level === 'college' ? '学院' : d.level === 'major' ? '阶段' : '班级',
+      层级: levelLabelMap[d.level] || d.level,
       上级部门ID: d.parentId || '—',
       负责人: d.leader.name,
       负责人职称: d.leader.title,
@@ -181,22 +202,27 @@ const DepartmentPage: React.FC = () => {
         okText: '确认删除',
         okType: 'danger',
         cancelText: '取消',
-        onOk: () => {
-          deleteDepartment(dept.id);
-          message.success(`已删除「${dept.name}」及其子部门`);
+        onOk: async () => {
+          try {
+            await deleteDepartment(dept.id);
+            message.success(`已删除「${dept.name}」及其子部门`);
+          } catch (error) {
+            message.error(error instanceof Error ? error.message : '删除部门失败');
+          }
         },
       });
     } else {
-      deleteDepartment(dept.id);
-      message.success(`已删除「${dept.name}」`);
+      deleteDepartment(dept.id)
+        .then(() => message.success(`已删除「${dept.name}」`))
+        .catch((error) => message.error(error instanceof Error ? error.message : '删除部门失败'));
     }
   };
 
   // ===== 提交表单 =====
   const handleSubmit = () => {
-    form.validateFields().then((values) => {
+    form.validateFields().then(async (values) => {
       if (modalMode === 'edit' && editingDept) {
-        editDepartment(editingDept.id, {
+        await editDepartment(editingDept.id, {
           name: values.name,
           code: values.code.toUpperCase(),
           leader: { name: values.leaderName, title: values.leaderTitle },
@@ -216,7 +242,7 @@ const DepartmentPage: React.FC = () => {
           status: 'operational',
           updatedAt: new Date().toISOString().split('T')[0],
         };
-        addDepartment(parentId, newDept);
+        await addDepartment(parentId, newDept);
         if (!expandedKeys.includes(parentId)) {
           setExpandedKeys([...expandedKeys, parentId]);
         }
@@ -233,11 +259,15 @@ const DepartmentPage: React.FC = () => {
           status: 'operational',
           updatedAt: new Date().toISOString().split('T')[0],
         };
-        addRootDepartment(newDept);
+        await addRootDepartment(newDept);
         message.success(`已添加根部门「${values.name}」`);
       }
       setModalOpen(false);
       form.resetFields();
+    }).catch((error) => {
+      if (error instanceof Error) {
+        message.error(error.message);
+      }
     });
   };
 
@@ -358,8 +388,9 @@ const DepartmentPage: React.FC = () => {
                 : undefined
             }
             onConfirm={() => {
-              deleteDepartment(record.id);
-              message.success(`已删除「${record.name}」`);
+              deleteDepartment(record.id)
+                .then(() => message.success(`已删除「${record.name}」`))
+                .catch((error) => message.error(error instanceof Error ? error.message : '删除部门失败'));
             }}
             okText="删除"
             cancelText="取消"
@@ -422,8 +453,9 @@ const DepartmentPage: React.FC = () => {
                 <SyncOutlined
                   style={{ color: '#999', cursor: 'pointer' }}
                   onClick={() => {
-                    fetchDepartments();
-                    message.info('已刷新');
+                    fetchDepartments()
+                      .then(() => message.info('已刷新'))
+                      .catch((error) => message.error(error instanceof Error ? error.message : '刷新失败'));
                   }}
                 />
               </Tooltip>
@@ -660,7 +692,13 @@ const DepartmentPage: React.FC = () => {
             <Row>
               <Col span={8} style={{ color: '#999' }}>层级</Col>
               <Col span={16}>
-                {detailDept.level === 'university' ? '学校' : detailDept.level === 'college' ? '学院' : detailDept.level === 'major' ? '阶段' : '班级'}
+                {({
+                  university: '学校',
+                  college: '学院',
+                  stage: '阶段',
+                  major: '专业',
+                  class: '班级',
+                } as const)[detailDept.level] ?? detailDept.level}
               </Col>
             </Row>
             <Row>

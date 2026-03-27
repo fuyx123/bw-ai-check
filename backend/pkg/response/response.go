@@ -79,12 +79,16 @@ func PageOKWithExtra(c *gin.Context, items interface{}, total int64, page int, p
 		Page:     page,
 		PageSize: pageSize,
 	}
-	c.JSON(200, gin.H{
+	payload := gin.H{
 		"code":      CodeOK,
 		"data":      data,
 		"message":   "success",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
-	})
+	}
+	for key, value := range extra {
+		payload[key] = value
+	}
+	c.JSON(200, payload)
 }
 
 // Fail 失败响应

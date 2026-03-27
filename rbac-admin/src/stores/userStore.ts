@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import type { UserInfo, UserType } from '../types/rbac';
-import { users } from '../mocks/data/users';
+import {
+  createUser as createUserRequest,
+  deleteUser as deleteUserRequest,
+  fetchUsers as fetchUsersRequest,
+  toggleUserStatus as toggleUserStatusRequest,
+  updateUser as updateUserRequest,
+} from '../services/users';
 
 interface UserFilters {
   departmentId?: string;
@@ -22,182 +28,157 @@ interface UserState {
   pagination: Pagination;
   totalActive: number;
   loading: boolean;
-  fetchUsers: () => void;
+  fetchUsers: () => Promise<void>;
   setFilter: (filters: Partial<UserFilters>) => void;
   clearFilters: () => void;
   applyFilters: () => void;
   setPagination: (page: number, pageSize?: number) => void;
-  addUser: (userData: Partial<UserInfo>) => void;
-  updateUser: (id: string, updates: Partial<UserInfo>) => void;
-  deleteUser: (id: string) => void;
+  addUser: (userData: Partial<UserInfo>) => Promise<void>;
+  updateUser: (id: string, updates: Partial<UserInfo>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
 }
 
 function filterUsers(allUsers: UserInfo[], filters: UserFilters): UserInfo[] {
   let result = [...allUsers];
 
   if (filters.userType) {
-    result = result.filter((u) => u.userType === filters.userType);
+    result = result.filter((user) => user.userType === filters.userType);
   }
   if (filters.departmentId) {
-    result = result.filter((u) => u.departmentId === filters.departmentId);
+    result = result.filter((user) => user.departmentId === filters.departmentId);
   }
   if (filters.roleId) {
-    result = result.filter((u) => u.roleIds.includes(filters.roleId!));
+    result = result.filter((user) => user.roleIds.includes(filters.roleId!));
   }
   if (filters.keyword) {
-    const kw = filters.keyword.toLowerCase();
+    const keyword = filters.keyword.toLowerCase();
     result = result.filter(
-      (u) =>
-        u.name.toLowerCase().includes(kw) ||
-        u.email.toLowerCase().includes(kw) ||
-        u.loginId.toLowerCase().includes(kw),
+      (user) =>
+        user.name.toLowerCase().includes(keyword) ||
+        user.email.toLowerCase().includes(keyword) ||
+        user.loginId.toLowerCase().includes(keyword),
     );
   }
 
   return result;
 }
 
-// 确保所有用户都有 isActive 字段
-const usersWithDefaults = users.map((u) => ({
-  ...u,
-  isActive: u.isActive ?? true,
-  createdAt: u.createdAt || new Date().toISOString(),
-  updatedAt: u.updatedAt || new Date().toISOString(),
-}));
+function buildUserState(users: UserInfo[], filters: UserFilters, pagination: Pagination, totalActive: number) {
+  const filteredUsers = filterUsers(users, filters);
+  return {
+    users,
+    filteredUsers,
+    filters,
+    pagination: {
+      ...pagination,
+      total: filteredUsers.length,
+      current: 1,
+    },
+    totalActive,
+  };
+}
 
 export const useUserStore = create<UserState>((set, get) => ({
-  users: usersWithDefaults,
-  filteredUsers: usersWithDefaults,
+  users: [],
+  filteredUsers: [],
   filters: {},
   pagination: {
     current: 1,
     pageSize: 10,
-    total: usersWithDefaults.length,
+    total: 0,
   },
-  totalActive: usersWithDefaults.filter((u) => u.accessStatus !== 'inactive').length,
+  totalActive: 0,
   loading: false,
 
-  fetchUsers: () => {
+  fetchUsers: async () => {
     set({ loading: true });
-    setTimeout(() => {
-      const currentUsers = get().users;
-      const filtered = filterUsers(currentUsers, get().filters);
-      set({
-        filteredUsers: filtered,
-        pagination: { ...get().pagination, total: filtered.length, current: 1 },
-        totalActive: currentUsers.filter((u) => u.accessStatus !== 'inactive').length,
-        loading: false,
-      });
-    }, 300);
-  },
-
-  setFilter: (newFilters: Partial<UserFilters>) => {
-    const currentUsers = get().users;
-    const merged = { ...get().filters, ...newFilters };
-    const filtered = filterUsers(currentUsers, merged);
+    const result = await fetchUsersRequest(1, 500);
     set({
-      filters: merged,
-      filteredUsers: filtered,
-      pagination: { ...get().pagination, total: filtered.length, current: 1 },
+      ...buildUserState(result.items, get().filters, get().pagination, result.totalActive),
+      loading: false,
     });
   },
 
-  clearFilters: () => {
-    const currentUsers = get().users;
+  setFilter: (newFilters) => {
+    const filters = { ...get().filters, ...newFilters };
     set({
-      filters: {},
-      filteredUsers: currentUsers,
-      pagination: { ...get().pagination, total: currentUsers.length, current: 1 },
-    });
-  },
-
-  applyFilters: () => {
-    const currentUsers = get().users;
-    const filtered = filterUsers(currentUsers, get().filters);
-    set({
-      filteredUsers: filtered,
-      pagination: { ...get().pagination, total: filtered.length, current: 1 },
-    });
-  },
-
-  setPagination: (page: number, pageSize?: number) => {
-    const prev = get().pagination;
-    set({
+      filters,
+      filteredUsers: filterUsers(get().users, filters),
       pagination: {
-        ...prev,
-        current: page,
-        pageSize: pageSize ?? prev.pageSize,
+        ...get().pagination,
+        total: filterUsers(get().users, filters).length,
+        current: 1,
       },
     });
   },
 
-  addUser: (userData: Partial<UserInfo>) => {
-    // 生成新 ID（简单实现）
-    const newId = `user-${Date.now()}`;
-    const now = new Date().toISOString();
+  clearFilters: () => {
+    set({
+      filters: {},
+      filteredUsers: get().users,
+      pagination: { ...get().pagination, total: get().users.length, current: 1 },
+    });
+  },
 
-    const newUser: UserInfo = {
-      id: newId,
+  applyFilters: () => {
+    const filteredUsers = filterUsers(get().users, get().filters);
+    set({
+      filteredUsers,
+      pagination: { ...get().pagination, total: filteredUsers.length, current: 1 },
+    });
+  },
+
+  setPagination: (page, pageSize) => {
+    set({
+      pagination: {
+        ...get().pagination,
+        current: page,
+        pageSize: pageSize ?? get().pagination.pageSize,
+      },
+    });
+  },
+
+  addUser: async (userData) => {
+    await createUserRequest({
       name: userData.name || '',
       email: userData.email || '',
-      avatar: userData.avatar,
-      initials: userData.initials,
-      departmentId: userData.departmentId || '',
-      departmentName: userData.departmentName || '',
-      roleIds: userData.roleIds || [],
-      roleName: userData.roleName || '',
-      accessStatus: userData.accessStatus || 'full',
-      userType: userData.userType || 'staff',
       loginId: userData.loginId || '',
+      password: '123456',
+      userType: userData.userType || 'staff',
+      departmentId: userData.departmentId || '',
+      roleIds: userData.roleIds || [],
+      accessStatus: userData.accessStatus || 'full',
+      isActive: userData.isActive ?? true,
+      avatar: userData.avatar,
       grade: userData.grade,
       className: userData.className,
       classId: userData.classId,
-      isActive: userData.isActive ?? true,
-      createdAt: userData.createdAt || now,
-      updatedAt: userData.updatedAt || now,
-    } as UserInfo;
-
-    const updatedUsers = [...get().users, newUser];
-    const filtered = filterUsers(updatedUsers, get().filters);
-
-    set({
-      users: updatedUsers,
-      filteredUsers: filtered,
-      pagination: { ...get().pagination, total: filtered.length },
-      totalActive: updatedUsers.filter((u) => u.accessStatus !== 'inactive').length,
     });
+    await get().fetchUsers();
   },
 
-  updateUser: (id: string, updates: Partial<UserInfo>) => {
-    const updatedUsers = get().users.map((user) =>
-      user.id === id
-        ? {
-            ...user,
-            ...updates,
-            updatedAt: new Date().toISOString(),
-          }
-        : user,
-    );
-
-    const filtered = filterUsers(updatedUsers, get().filters);
-
-    set({
-      users: updatedUsers,
-      filteredUsers: filtered,
-      pagination: { ...get().pagination, total: filtered.length },
-      totalActive: updatedUsers.filter((u) => u.accessStatus !== 'inactive').length,
-    });
+  updateUser: async (id, updates) => {
+    if (typeof updates.isActive === 'boolean' && Object.keys(updates).length === 1) {
+      await toggleUserStatusRequest(id, updates.isActive);
+    } else {
+      await updateUserRequest(id, {
+        name: updates.name,
+        email: updates.email,
+        departmentId: updates.departmentId,
+        roleIds: updates.roleIds,
+        accessStatus: updates.accessStatus,
+        isActive: updates.isActive,
+        avatar: updates.avatar,
+        grade: updates.grade,
+        className: updates.className,
+        classId: updates.classId,
+      });
+    }
+    await get().fetchUsers();
   },
 
-  deleteUser: (id: string) => {
-    const updatedUsers = get().users.filter((user) => user.id !== id);
-    const filtered = filterUsers(updatedUsers, get().filters);
-
-    set({
-      users: updatedUsers,
-      filteredUsers: filtered,
-      pagination: { ...get().pagination, total: filtered.length, current: 1 },
-      totalActive: updatedUsers.filter((u) => u.accessStatus !== 'inactive').length,
-    });
+  deleteUser: async (id) => {
+    await deleteUserRequest(id);
+    await get().fetchUsers();
   },
 }));

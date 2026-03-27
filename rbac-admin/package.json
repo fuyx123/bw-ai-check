@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:all": "npm run build && npm run server:build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server:build": "tsc -p tsconfig.server.json && cp server/package.json server-dist/package.json",
+    "server:start": "node server-dist/server/src/index.js",
+    "server:dev": "npm run server:build && node --watch server-dist/server/src/index.js"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

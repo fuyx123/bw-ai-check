@@ -1,59 +1,87 @@
 import { create } from 'zustand';
 import type { MenuItem } from '../types/rbac';
-import { menus as initialMenus, buildMenuTree } from '../mocks/data/menus';
+import {
+  createMenu as createMenuRequest,
+  deleteMenu as deleteMenuRequest,
+  fetchMenuTree,
+  fetchUserMenuTree,
+  updateMenu as updateMenuRequest,
+} from '../services/menus';
 
 interface MenuState {
   menus: MenuItem[];
   menuTree: MenuItem[];
+  navigationMenus: MenuItem[];
+  navigationTree: MenuItem[];
   loading: boolean;
-  fetchMenus: () => void;
-  addMenu: (menu: MenuItem) => void;
-  editMenu: (id: string, updates: Partial<MenuItem>) => void;
-  deleteMenu: (id: string) => void;
+  fetchMenus: () => Promise<void>;
+  fetchNavigationMenus: () => Promise<void>;
+  clearMenus: () => void;
+  addMenu: (menu: MenuItem) => Promise<void>;
+  editMenu: (id: string, updates: Partial<MenuItem>) => Promise<void>;
+  deleteMenu: (id: string) => Promise<void>;
   getMenuTree: () => MenuItem[];
   getAllMenuIds: () => string[];
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
-  menus: initialMenus,
-  menuTree: buildMenuTree(initialMenus),
+  menus: [],
+  menuTree: [],
+  navigationMenus: [],
+  navigationTree: [],
   loading: false,
 
-  fetchMenus: () => {
-    set({ menus: initialMenus, menuTree: buildMenuTree(initialMenus) });
+  fetchMenus: async () => {
+    set({ loading: true });
+    const { flat, tree } = await fetchMenuTree();
+    set({ menus: flat, menuTree: tree, loading: false });
   },
 
-  addMenu: (menu) => {
-    set((s) => {
-      const newMenus = [...s.menus, menu];
-      return { menus: newMenus, menuTree: buildMenuTree(newMenus) };
-    });
+  fetchNavigationMenus: async () => {
+    set({ loading: true });
+    const { flat, tree } = await fetchUserMenuTree();
+    set({ navigationMenus: flat, navigationTree: tree, loading: false });
   },
 
-  editMenu: (id, updates) => {
-    set((s) => {
-      const newMenus = s.menus.map((m) =>
-        m.id === id ? { ...m, ...updates } : m,
-      );
-      return { menus: newMenus, menuTree: buildMenuTree(newMenus) };
+  clearMenus: () => set({
+    menus: [],
+    menuTree: [],
+    navigationMenus: [],
+    navigationTree: [],
+    loading: false,
+  }),
+
+  addMenu: async (menu) => {
+    await createMenuRequest({
+      name: menu.name,
+      path: menu.path,
+      icon: menu.icon,
+      parentId: menu.parentId,
+      sortOrder: menu.sortOrder,
+      visible: menu.visible,
+      type: menu.type,
     });
+    await get().fetchMenus();
   },
 
-  deleteMenu: (id) => {
-    set((s) => {
-      const toDelete = new Set<string>();
-      const collectChildren = (parentId: string) => {
-        toDelete.add(parentId);
-        s.menus
-          .filter((m) => m.parentId === parentId)
-          .forEach((m) => collectChildren(m.id));
-      };
-      collectChildren(id);
-      const newMenus = s.menus.filter((m) => !toDelete.has(m.id));
-      return { menus: newMenus, menuTree: buildMenuTree(newMenus) };
+  editMenu: async (id, updates) => {
+    await updateMenuRequest(id, {
+      name: updates.name,
+      path: updates.path,
+      icon: updates.icon,
+      parentId: updates.parentId,
+      sortOrder: updates.sortOrder,
+      visible: updates.visible,
+      type: updates.type,
     });
+    await get().fetchMenus();
+  },
+
+  deleteMenu: async (id) => {
+    await deleteMenuRequest(id);
+    await get().fetchMenus();
   },
 
   getMenuTree: () => get().menuTree,
-  getAllMenuIds: () => get().menus.map((m) => m.id),
+  getAllMenuIds: () => get().menus.map((item) => item.id),
 }));

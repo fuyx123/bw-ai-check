@@ -1,0 +1,7 @@
+./audit_log.go
+./department.go
+./grade.go
+./menu.go
+./position.go
+./role.go
+./user.go

@@ -39,19 +39,17 @@ const iconMap: Record<string, React.ReactNode> = {
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { menus } = useMenuStore();
-  const { permissions, logout } = useAuthStore();
+  const navigationMenus = useMenuStore((state) => state.navigationMenus);
+  const logout = useAuthStore((state) => state.logout);
 
-  // 从 store 动态生成导航项：仅 type=menu + visible + 用户有权限 + 根菜单
+  // 从用户菜单动态生成导航项：仅 type=menu + visible + 根菜单
   const navItems: NavMenuItem[] = useMemo(() => {
-    const permSet = new Set(permissions);
-    return menus
+    return navigationMenus
       .filter(
         (m) =>
           m.type === 'menu' &&
           m.visible &&
-          m.parentId === null &&
-          permSet.has(m.id)
+          m.parentId === null
       )
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((m) => ({
@@ -59,7 +57,7 @@ const Sidebar: React.FC = () => {
         icon: iconMap[m.icon] || <AppstoreOutlined />,
         label: m.name,
       }));
-  }, [menus, permissions]);
+  }, [navigationMenus]);
 
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     navigate(key);
@@ -71,8 +69,8 @@ const Sidebar: React.FC = () => {
       content: '确定要退出登录吗？',
       okText: '退出',
       cancelText: '取消',
-      onOk: () => {
-        logout();
+      onOk: async () => {
+        await logout();
         navigate('/login', { replace: true });
       },
     });

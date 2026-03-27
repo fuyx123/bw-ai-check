@@ -7,6 +7,21 @@ import (
 	"bw-ai-check/backend/internal/model"
 )
 
+var permissionAliases = map[string][]string{
+	"menu-users":     {"menu-users", "menu-user"},
+	"menu-roles":     {"menu-roles", "menu-role"},
+	"menu-menus":     {"menu-menus", "menu-menu"},
+	"menu-positions": {"menu-positions", "menu-position"},
+	"menu-grades":    {"menu-grades", "menu-grade"},
+}
+
+func permissionCandidates(requiredMenuID string) []string {
+	if aliases, ok := permissionAliases[requiredMenuID]; ok {
+		return aliases
+	}
+	return []string{requiredMenuID}
+}
+
 // PermissionMiddleware 权限检查中间件（根据 menuID 检查）
 func PermissionMiddleware(requiredMenuID string) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -27,8 +42,15 @@ func PermissionMiddleware(requiredMenuID string) gin.HandlerFunc {
 
 		// 检查是否有该菜单权限
 		hasPermission := false
+		candidates := permissionCandidates(requiredMenuID)
 		for _, rm := range roleMenus {
-			if rm.MenuID == requiredMenuID {
+			for _, candidate := range candidates {
+				if rm.MenuID == candidate {
+					hasPermission = true
+					break
+				}
+			}
+			if hasPermission {
 				hasPermission = true
 				break
 			}
@@ -56,9 +78,12 @@ func HasPermission(c *gin.Context, menuID string) bool {
 		return false
 	}
 
+	candidates := permissionCandidates(menuID)
 	for _, rm := range roleMenus {
-		if rm.MenuID == menuID {
-			return true
+		for _, candidate := range candidates {
+			if rm.MenuID == candidate {
+				return true
+			}
 		}
 	}
 

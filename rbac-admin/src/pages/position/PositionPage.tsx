@@ -149,13 +149,13 @@ const PositionPage: React.FC = () => {
     setPosModalOpen(true);
   };
   const handlePosSubmit = () => {
-    posForm.validateFields().then((values) => {
+    posForm.validateFields().then(async (values) => {
       if (editingPos) {
-        editPosition(editingPos.id, values);
+        await editPosition(editingPos.id, values);
         message.success(`已更新「${values.name}」`);
       } else {
-        addPosition({
-          id: `pos-${Date.now()}`,
+        await addPosition({
+          id: '',
           ...values,
           code: values.code.toUpperCase(),
           createdAt: new Date().toISOString().split('T')[0],
@@ -164,6 +164,10 @@ const PositionPage: React.FC = () => {
       }
       setPosModalOpen(false);
       posForm.resetFields();
+    }).catch((error) => {
+      if (error instanceof Error) {
+        message.error(error.message);
+      }
     });
   };
 
@@ -187,10 +191,10 @@ const PositionPage: React.FC = () => {
     setCatModalOpen(true);
   };
   const handleCatSubmit = () => {
-    catForm.validateFields().then((values) => {
+    catForm.validateFields().then(async (values) => {
       const color = typeof values.color === 'string' ? values.color : (values.color as Color).toHexString();
       if (editingCat) {
-        editCategory(editingCat.id, { ...values, color });
+        await editCategory(editingCat.id, { ...values, color });
         message.success(`已更新类别「${values.name}」`);
       } else {
         // 检查 code 唯一性
@@ -198,8 +202,8 @@ const PositionPage: React.FC = () => {
           message.error(`编码「${values.code}」已存在`);
           return;
         }
-        addCategory({
-          id: `cat-${Date.now()}`,
+        await addCategory({
+          id: values.code.toLowerCase(),
           ...values,
           color,
           code: values.code.toLowerCase(),
@@ -208,6 +212,10 @@ const PositionPage: React.FC = () => {
       }
       setCatModalOpen(false);
       catForm.resetFields();
+    }).catch((error) => {
+      if (error instanceof Error) {
+        message.error(error.message);
+      }
     });
   };
 
@@ -314,7 +322,11 @@ const PositionPage: React.FC = () => {
           <Popconfirm
             title={`确定删除「${record.name}」吗？`}
             description={record.headcount > 0 ? `当前有 ${record.headcount} 人在岗` : undefined}
-            onConfirm={() => { deletePosition(record.id); message.success(`已删除「${record.name}」`); }}
+            onConfirm={() => {
+              deletePosition(record.id)
+                .then(() => message.success(`已删除「${record.name}」`))
+                .catch((error) => message.error(error instanceof Error ? error.message : '删除职位失败'));
+            }}
             okText="删除" cancelText="取消" okButtonProps={{ danger: true }}
           >
             <Tooltip title="删除">
@@ -395,8 +407,9 @@ const PositionPage: React.FC = () => {
                   message.error(`类别下有 ${posCount} 个职位，无法删除`);
                   return;
                 }
-                deleteCategory(record.id);
-                message.success(`已删除类别「${record.name}」`);
+                deleteCategory(record.id)
+                  .then(() => message.success(`已删除类别「${record.name}」`))
+                  .catch((error) => message.error(error instanceof Error ? error.message : '删除类别失败'));
               }}
               okText="删除" cancelText="取消" okButtonProps={{ danger: true }}
             >
@@ -478,6 +491,8 @@ const PositionPage: React.FC = () => {
             <Select
               placeholder="所有类别"
               style={{ width: 160 }}
+              showSearch
+              optionFilterProp="label"
               allowClear
               value={filterCategory}
               onChange={(v) => setFilterCategory(v)}
@@ -537,7 +552,12 @@ const PositionPage: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="category" label="所属类别" rules={[{ required: true, message: '请选择' }]}>
-                <Select options={categoryOptions} placeholder="选择类别" />
+                <Select
+                  options={categoryOptions}
+                  placeholder="选择类别"
+                  showSearch
+                  optionFilterProp="label"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>

@@ -26,7 +26,7 @@ import {
   DeleteOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
-import type { DataNode } from 'antd/es/tree';
+import type { DataNode, TreeProps } from 'antd/es/tree';
 import { useRoleStore } from '../../stores/roleStore';
 import { useMenuStore } from '../../stores/menuStore';
 import { useAuditStore } from '../../stores/auditStore';
@@ -43,6 +43,39 @@ const dataScopeOptions: { key: DataScope; level: string; name: string; desc: str
 const scopeLabels: Record<string, string> = {
   school: '学校', college: '学院', major: '专业', class: '班级',
 };
+
+function buildPersistedPermissions(permissionIds: string[], ancestorsById: Map<string, string[]>) {
+  const persisted = new Set(permissionIds);
+  for (const permissionId of permissionIds) {
+    ancestorsById.get(permissionId)?.forEach((ancestorId) => persisted.add(ancestorId));
+  }
+  return [...persisted].sort();
+}
+
+function buildDraftPermissions(permissionIds: string[], tree: MenuItem[]) {
+  const persisted = new Set(permissionIds);
+  const explicit = new Set<string>();
+
+  const visit = (item: MenuItem): { hasAny: boolean; all: boolean } => {
+    const children = item.children ?? [];
+    const childStates = children.map((child) => visit(child));
+    const hasSelectedDescendant = childStates.some((state) => state.hasAny);
+    const allChildrenSelected = children.length > 0 && childStates.every((state) => state.all);
+    const selfSelected = persisted.has(item.id);
+
+    if (selfSelected && (!hasSelectedDescendant || allChildrenSelected)) {
+      explicit.add(item.id);
+    }
+
+    return {
+      hasAny: selfSelected || hasSelectedDescendant,
+      all: selfSelected && (children.length === 0 || allChildrenSelected),
+    };
+  };
+
+  tree.forEach((item) => visit(item));
+  return [...explicit].sort();
+}
 
 function timeAgo(ts: number): string {
   const diff = Math.floor((Date.now() - ts) / 1000);
@@ -64,7 +97,7 @@ const RolePage: React.FC = () => {
   const {
     roles, selectedRole, fetchRoles, selectRole,
     addRole, editRole, deleteRole,
-    updateRolePermissions, updateRoleDataScope,
+    saveRoleAccess,
   } = useRoleStore();
   const { menus, menuTree, fetchMenus } = useMenuStore();
   const { logs, addLog } = useAuditStore();
@@ -74,6 +107,9 @@ const RolePage: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [draftPermissions, setDraftPermissions] = useState<string[]>([]);
+  const [draftDataScope, setDraftDataScope] = useState<DataScope>('school');
+  const [savingAccess, setSavingAccess] = useState(false);
   const [roleForm] = Form.useForm();
 
   const operator = currentUser?.name || '系统管理员';
@@ -86,6 +122,17 @@ const RolePage: React.FC = () => {
   useEffect(() => {
     if (!selectedRole && roles.length > 0) selectRole('role-dean');
   }, [selectedRole, roles, selectRole]);
+
+  useEffect(() => {
+    if (!selectedRole) {
+      setDraftPermissions([]);
+      setDraftDataScope('school');
+      return;
+    }
+
+    setDraftPermissions(buildDraftPermissions(selectedRole.permissions, menuTree));
+    setDraftDataScope(selectedRole.dataScope);
+  }, [menuTree, selectedRole]);
 
   // 构建菜单树
   const buildTreeNodes = (items: MenuItem[]): DataNode[] => {
@@ -106,70 +153,179 @@ const RolePage: React.FC = () => {
   const treeNodes = useMemo(() => buildTreeNodes(menuTree), [menuTree]);
   const allMenuIds = useMemo(() => menus.map((m) => m.id), [menus]);
 
+  const { descendantsById, ancestorsById } = useMemo(() => {
+    const childrenMap = new Map<string, string[]>();
+    const parentMap = new Map<string, string | null>();
+
+    for (const menu of menus) {
+      parentMap.set(menu.id, menu.parentId);
+      if (!menu.parentId) continue;
+      const siblings = childrenMap.get(menu.parentId) ?? [];
+      siblings.push(menu.id);
+      childrenMap.set(menu.parentId, siblings);
+    }
+
+    const descendantsCache = new Map<string, string[]>();
+    const collectDescendants = (id: string): string[] => {
+      const cached = descendantsCache.get(id);
+      if (cached) {
+        return cached;
+      }
+
+      const childIds = childrenMap.get(id) ?? [];
+      const descendants = childIds.flatMap((childId) => [childId, ...collectDescendants(childId)]);
+      descendantsCache.set(id, descendants);
+      return descendants;
+    };
+
+    const ancestors = new Map<string, string[]>();
+    for (const menu of menus) {
+      const parentIds: string[] = [];
+      let currentParentId = parentMap.get(menu.id) ?? null;
+      while (currentParentId) {
+        parentIds.unshift(currentParentId);
+        currentParentId = parentMap.get(currentParentId) ?? null;
+      }
+      ancestors.set(menu.id, parentIds);
+    }
+
+    for (const menu of menus) {
+      collectDescendants(menu.id);
+    }
+
+    return {
+      descendantsById: descendantsCache,
+      ancestorsById: ancestors,
+    };
+  }, [menus]);
+
   const { checkedKeys, halfCheckedKeys } = useMemo(() => {
-    if (!selectedRole) return { checkedKeys: [], halfCheckedKeys: [] };
-    const perms = new Set(selectedRole.permissions);
+    const perms = new Set(draftPermissions);
     const checked: string[] = [];
     const half: string[] = [];
-    for (const m of menus) {
-      if (!perms.has(m.id)) continue;
-      const children = menus.filter((c) => c.parentId === m.id);
+
+    const visit = (item: MenuItem): 'checked' | 'half' | 'none' => {
+      const children = item.children ?? [];
+      const selfChecked = perms.has(item.id);
+
       if (children.length === 0) {
-        checked.push(m.id);
-      } else {
-        const allChildChecked = children.every((c) => perms.has(c.id));
-        if (allChildChecked) checked.push(m.id);
-        else half.push(m.id);
+        if (selfChecked) {
+          checked.push(item.id);
+          return 'checked';
+        }
+        return 'none';
       }
-    }
+
+      const childStates = children.map((child) => visit(child));
+      const hasCheckedChild = childStates.some((state) => state !== 'none');
+      const allChildrenChecked = childStates.length > 0 && childStates.every((state) => state === 'checked');
+
+      if (selfChecked && (allChildrenChecked || !hasCheckedChild)) {
+        checked.push(item.id);
+        return 'checked';
+      }
+
+      if (selfChecked || hasCheckedChild) {
+        half.push(item.id);
+        return 'half';
+      }
+
+      return 'none';
+    };
+
+    menuTree.forEach((item) => visit(item));
     return { checkedKeys: checked, halfCheckedKeys: half };
-  }, [selectedRole, menus]);
+  }, [draftPermissions, menuTree]);
+
+  const persistedDraftPermissions = useMemo(
+    () => buildPersistedPermissions(draftPermissions, ancestorsById),
+    [ancestorsById, draftPermissions]
+  );
+
+  const permissionsDirty = useMemo(() => {
+    if (!selectedRole) return false;
+    const current = [...selectedRole.permissions].sort().join('|');
+    const draft = persistedDraftPermissions.join('|');
+    return current !== draft;
+  }, [persistedDraftPermissions, selectedRole]);
+
+  const scopeDirty = !!selectedRole && selectedRole.dataScope !== draftDataScope;
+  const hasPendingChanges = permissionsDirty || scopeDirty;
 
   // ===== 权限勾选 =====
-  const handlePermCheck = (
-    checked: React.Key[] | { checked: React.Key[]; halfChecked: React.Key[] }
-  ) => {
-    if (!selectedRole) return;
-    const keys = Array.isArray(checked) ? checked : checked.checked;
-    const halfKeys = Array.isArray(checked) ? [] : checked.halfChecked;
-    const allPerms = [...keys, ...halfKeys].map(String);
+  const handlePermCheck: TreeProps['onCheck'] = (_, info) => {
+    const targetId = String(info.node.key);
+    const nextPermissions = new Set(draftPermissions);
 
-    // 对比新旧权限，找出新增和移除的菜单名称
-    const oldSet = new Set(selectedRole.permissions);
-    const newSet = new Set(allPerms);
-    const menuNameMap = new Map(menus.map((m) => [m.id, m.name]));
+    if (info.checked) {
+      nextPermissions.add(targetId);
+      descendantsById.get(targetId)?.forEach((id) => nextPermissions.add(id));
+    } else {
+      nextPermissions.delete(targetId);
+      descendantsById.get(targetId)?.forEach((id) => nextPermissions.delete(id));
+    }
 
-    const added = allPerms.filter((id) => !oldSet.has(id)).map((id) => menuNameMap.get(id) || id);
-    const removed = selectedRole.permissions.filter((id) => !newSet.has(id)).map((id) => menuNameMap.get(id) || id);
-
-    const parts: string[] = [];
-    if (added.length) parts.push(`新增「${added.join('、')}」`);
-    if (removed.length) parts.push(`移除「${removed.join('、')}」`);
-    const detail = parts.length ? parts.join('；') : '权限未变更';
-
-    updateRolePermissions(selectedRole.id, allPerms);
-    addLog({
-      action: 'permission',
-      targetType: 'role',
-      targetName: selectedRole.name,
-      detail,
-      operator,
-    });
+    setDraftPermissions([...nextPermissions].sort());
   };
 
   // ===== 数据范围 =====
   const handleDataScopeChange = (scope: DataScope) => {
+    setDraftDataScope(scope);
+  };
+
+  const handleResetAccess = () => {
     if (!selectedRole) return;
-    const oldScope = selectedRole.dataScope;
-    if (oldScope === scope) return;
-    updateRoleDataScope(selectedRole.id, scope);
-    addLog({
-      action: 'scope',
-      targetType: 'role',
-      targetName: selectedRole.name,
-      detail: `数据范围从「${scopeLabels[oldScope]}」变更为「${scopeLabels[scope]}」`,
-      operator,
-    });
+    setDraftPermissions(buildDraftPermissions(selectedRole.permissions, menuTree));
+    setDraftDataScope(selectedRole.dataScope);
+  };
+
+  const handleSaveAccess = async () => {
+    if (!selectedRole || !hasPendingChanges) return;
+
+    const nextPermissions = persistedDraftPermissions;
+    const oldPermissions = new Set(selectedRole.permissions);
+    const nextPermissionSet = new Set(nextPermissions);
+    const menuNameMap = new Map(menus.map((menu) => [menu.id, menu.name]));
+    const added = nextPermissions
+      .filter((id) => !oldPermissions.has(id))
+      .map((id) => menuNameMap.get(id) || id);
+    const removed = selectedRole.permissions
+      .filter((id) => !nextPermissionSet.has(id))
+      .map((id) => menuNameMap.get(id) || id);
+    const permissionParts: string[] = [];
+    if (added.length > 0) permissionParts.push(`新增「${added.join('、')}」`);
+    if (removed.length > 0) permissionParts.push(`移除「${removed.join('、')}」`);
+
+    try {
+      setSavingAccess(true);
+      await saveRoleAccess(selectedRole.id, nextPermissions, draftDataScope);
+
+      if (permissionParts.length > 0) {
+        addLog({
+          action: 'permission',
+          targetType: 'role',
+          targetName: selectedRole.name,
+          detail: permissionParts.join('；'),
+          operator,
+        });
+      }
+
+      if (scopeDirty) {
+        addLog({
+          action: 'scope',
+          targetType: 'role',
+          targetName: selectedRole.name,
+          detail: `数据范围从「${scopeLabels[selectedRole.dataScope]}」变更为「${scopeLabels[draftDataScope]}」`,
+          operator,
+        });
+      }
+
+      message.success('权限配置已保存');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存权限配置失败');
+    } finally {
+      setSavingAccess(false);
+    }
   };
 
   const filteredRoles = roles.filter((r) => r.name.includes(searchText));
@@ -191,9 +347,9 @@ const RolePage: React.FC = () => {
     setRoleModalOpen(true);
   };
   const handleRoleSubmit = () => {
-    roleForm.validateFields().then((values) => {
+    roleForm.validateFields().then(async (values) => {
       if (editingRole) {
-        editRole(editingRole.id, values);
+        await editRole(editingRole.id, values);
         addLog({
           action: 'update',
           targetType: 'role',
@@ -203,8 +359,8 @@ const RolePage: React.FC = () => {
         });
         message.success(`已更新角色「${values.name}」`);
       } else {
-        addRole({
-          id: `role-${Date.now()}`,
+        await addRole({
+          id: '',
           name: values.name,
           description: values.description,
           dataScope: values.dataScope,
@@ -222,24 +378,32 @@ const RolePage: React.FC = () => {
       }
       setRoleModalOpen(false);
       roleForm.resetFields();
+    }).catch((error) => {
+      if (error instanceof Error) {
+        message.error(error.message);
+      }
     });
   };
-  const handleDeleteRole = () => {
+  const handleDeleteRole = async () => {
     if (!selectedRole) return;
     if (selectedRole.userCount > 0) {
       message.error(`角色下有 ${selectedRole.userCount} 个用户，无法删除`);
       return;
     }
     const name = selectedRole.name;
-    deleteRole(selectedRole.id);
-    addLog({
-      action: 'delete',
-      targetType: 'role',
-      targetName: name,
-      detail: `删除角色「${name}」`,
-      operator,
-    });
-    message.success(`已删除角色「${name}」`);
+    try {
+      await deleteRole(selectedRole.id);
+      addLog({
+        action: 'delete',
+        targetType: 'role',
+        targetName: name,
+        detail: `删除角色「${name}」`,
+        operator,
+      });
+      message.success(`已删除角色「${name}」`);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '删除角色失败');
+    }
   };
 
   // ===== 审计日志表格 =====
@@ -397,7 +561,7 @@ const RolePage: React.FC = () => {
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1a2e', display: 'inline-block' }} />
                       菜单与按钮权限
                       <span style={{ fontSize: 12, color: '#999', fontWeight: 400, marginLeft: 8 }}>
-                        已选 {selectedRole.permissions.length}/{allMenuIds.length}
+                        已选 {persistedDraftPermissions.length}/{allMenuIds.length}
                       </span>
                     </h4>
                     <div style={{ border: '1px solid #e8eaed', borderRadius: 8, padding: 12, maxHeight: 320, overflow: 'auto' }}>
@@ -422,13 +586,13 @@ const RolePage: React.FC = () => {
                       {dataScopeOptions.map((scope) => (
                         <div
                           key={scope.key}
-                          className={`data-scope-item ${selectedRole.dataScope === scope.key ? 'active' : ''}`}
+                          className={`data-scope-item ${draftDataScope === scope.key ? 'active' : ''}`}
                           onClick={() => handleDataScopeChange(scope.key)}
                         >
                           <div className="scope-level">{scope.level}</div>
                           <div className="scope-name">{scope.name}</div>
                           <div className="scope-desc">
-                            {selectedRole.dataScope === scope.key && <CheckCircleOutlined style={{ marginRight: 4 }} />}
+                            {draftDataScope === scope.key && <CheckCircleOutlined style={{ marginRight: 4 }} />}
                             {scope.desc}
                           </div>
                         </div>
@@ -437,10 +601,17 @@ const RolePage: React.FC = () => {
                   </div>
 
                   <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                    <Button type="primary" size="large" style={{ flex: 1 }} onClick={() => message.success('权限已保存')}>
+                    <Button
+                      type="primary"
+                      size="large"
+                      style={{ flex: 1 }}
+                      onClick={handleSaveAccess}
+                      loading={savingAccess}
+                      disabled={!hasPendingChanges}
+                    >
                       保存修改
                     </Button>
-                    <Button size="large" onClick={() => { if (selectedRole) selectRole(selectedRole.id); }}>
+                    <Button size="large" onClick={handleResetAccess} disabled={!hasPendingChanges || savingAccess}>
                       重置
                     </Button>
                   </div>
@@ -578,6 +749,8 @@ const RolePage: React.FC = () => {
             <Select
               options={dataScopeOptions.map((s) => ({ value: s.key, label: s.name }))}
               placeholder="选择数据范围"
+              showSearch
+              optionFilterProp="label"
             />
           </Form.Item>
         </Form>
