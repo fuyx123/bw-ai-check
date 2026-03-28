@@ -150,52 +150,27 @@ func (s *MenuService) Delete(access AccessContext, id string) error {
 }
 
 func buildMenuTree(menus []model.Menu) []model.Menu {
-	nodes := make(map[string]model.Menu, len(menus))
-	childrenByParent := make(map[string][]string)
-	rootIDs := make([]string, 0)
-
+	menuMap := make(map[string]model.Menu)
 	for _, menu := range menus {
-		item := menu
-		item.Children = nil
-		nodes[item.ID] = item
-
-		if item.ParentID != nil {
-			childrenByParent[*item.ParentID] = append(childrenByParent[*item.ParentID], item.ID)
-			continue
-		}
-
-		rootIDs = append(rootIDs, item.ID)
+		menu.Children = nil
+		menuMap[menu.ID] = menu
 	}
 
-	var assemble func(string) model.Menu
-	assemble = func(id string) model.Menu {
-		node := nodes[id]
-		childIDs := childrenByParent[id]
-		if len(childIDs) == 0 {
-			return node
-		}
-
-		node.Children = make([]model.Menu, 0, len(childIDs))
-		for _, childID := range childIDs {
-			if _, ok := nodes[childID]; !ok {
-				continue
+	var buildTree func(*string) []model.Menu
+	buildTree = func(parentID *string) []model.Menu {
+		result := make([]model.Menu, 0)
+		for _, menu := range menus {
+			if (parentID == nil && menu.ParentID == nil) ||
+				(parentID != nil && menu.ParentID != nil && *parentID == *menu.ParentID) {
+				menu.Children = buildTree(&menu.ID)
+				result = append(result, menu)
 			}
-			node.Children = append(node.Children, assemble(childID))
 		}
-		sortMenuTree(node.Children)
-		return node
+		sortMenuTree(result)
+		return result
 	}
 
-	roots := make([]model.Menu, 0, len(rootIDs))
-	for _, rootID := range rootIDs {
-		if _, ok := nodes[rootID]; !ok {
-			continue
-		}
-		roots = append(roots, assemble(rootID))
-	}
-
-	sortMenuTree(roots)
-	return roots
+	return buildTree(nil)
 }
 
 func sortMenuTree(nodes []model.Menu) {
