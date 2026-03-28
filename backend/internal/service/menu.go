@@ -149,75 +149,102 @@ func (s *MenuService) Delete(access AccessContext, id string) error {
 	})
 }
 
-func buildMenuTree(menus []model.Menu) []model.Menu {
+// MenuTreeBuilder 菜单树构建器
+type MenuTreeBuilder struct {
+	menus map[string]model.Menu
+}
+
+// NewMenuTreeBuilder 创建菜单树构建器
+func NewMenuTreeBuilder(menus []model.Menu) *MenuTreeBuilder {
 	menuMap := make(map[string]model.Menu)
 	for _, menu := range menus {
 		menu.Children = nil
 		menuMap[menu.ID] = menu
 	}
+	return &MenuTreeBuilder{menus: menuMap}
+}
 
-	var buildTree func(*string) []model.Menu
-	buildTree = func(parentID *string) []model.Menu {
-		result := make([]model.Menu, 0)
-		for _, menu := range menus {
-			if (parentID == nil && menu.ParentID == nil) ||
-				(parentID != nil && menu.ParentID != nil && *parentID == *menu.ParentID) {
-				menu.Children = buildTree(&menu.ID)
-				result = append(result, menu)
+// Build 构建菜单树（从根节点开始）
+func (b *MenuTreeBuilder) Build() []model.Menu {
+	roots := b.findChildren(nil)
+	b.sort(roots)
+	return roots
+}
+
+// BuildFromParent 从指定父节点构建菜单树
+func (b *MenuTreeBuilder) BuildFromParent(parentID *string) []model.Menu {
+	children := b.findChildren(parentID)
+	b.sort(children)
+	return children
+}
+
+// findChildren 递归找出指定父节点的所有直接子菜单
+func (b *MenuTreeBuilder) findChildren(parentID *string) []model.Menu {
+	result := make([]model.Menu, 0)
+	for _, menu := range b.menus {
+		if b.isChild(menu, parentID) {
+			childMenu := menu
+			childMenu.Children = b.findChildren(&menu.ID)
+			result = append(result, childMenu)
+		}
+	}
+	return result
+}
+
+// isChild 判断是否是子菜单
+func (b *MenuTreeBuilder) isChild(menu model.Menu, parentID *string) bool {
+	if parentID == nil {
+		return menu.ParentID == nil
+	}
+	return menu.ParentID != nil && *menu.ParentID == *parentID
+}
+
+// sort 按 SortOrder 和 Name 排序菜单树（含递归）
+func (b *MenuTreeBuilder) sort(menus []model.Menu) {
+	slices.SortFunc(menus, func(a, b model.Menu) int {
+		if a.SortOrder != b.SortOrder {
+			if a.SortOrder < b.SortOrder {
+				return -1
 			}
+			return 1
 		}
-		sortMenuTree(result)
-		return result
-	}
-
-	return buildTree(nil)
-}
-
-func sortMenuTree(nodes []model.Menu) {
-	slices.SortFunc(nodes, func(a, b model.Menu) int {
-		if a.SortOrder == b.SortOrder {
-			return strings.Compare(a.Name, b.Name)
-		}
-		if a.SortOrder < b.SortOrder {
-			return -1
-		}
-		return 1
+		return strings.Compare(a.Name, b.Name)
 	})
-	for idx := range nodes {
-		if len(nodes[idx].Children) > 0 {
-			sortMenuTree(nodes[idx].Children)
+	for i := range menus {
+		if len(menus[i].Children) > 0 {
+			b.sort(menus[i].Children)
 		}
 	}
 }
 
-func collectMenuDeleteOrder(rootID string, menus []model.Menu) []string {
-	childrenByParent := make(map[string][]string)
-	for _, menu := range menus {
-		if menu.ParentID != nil {
-			childrenByParent[*menu.ParentID] = append(childrenByParent[*menu.ParentID], menu.ID)
-		}
-	}
-
-	result := make([]string, 0)
-	var walk func(string)
-	walk = func(nodeID string) {
-		for _, childID := range childrenByParent[nodeID] {
-			walk(childID)
-		}
-		result = append(result, nodeID)
-	}
-
-	exists := false
-	for _, menu := range menus {
-		if menu.ID == rootID {
-			exists = true
-			break
-		}
-	}
-	if !exists {
+// CollectDeleteIDs 收集要删除的菜单 ID（包含所有子菜单）
+func (b *MenuTreeBuilder) CollectDeleteIDs(rootID string) []string {
+	if _, exists := b.menus[rootID]; !exists {
 		return nil
 	}
 
-	walk(rootID)
+	result := make([]string, 0)
+	b.collectChildrenIDs(rootID, &result)
+	result = append(result, rootID)
 	return result
+}
+
+// collectChildrenIDs 递归收集所有子菜单 ID
+func (b *MenuTreeBuilder) collectChildrenIDs(nodeID string, result *[]string) {
+	for _, menu := range b.menus {
+		if menu.ParentID != nil && *menu.ParentID == nodeID {
+			b.collectChildrenIDs(menu.ID, result)
+			*result = append(*result, menu.ID)
+		}
+	}
+}
+
+// buildMenuTree 构建菜单树（兼容现有接口）
+func buildMenuTree(menus []model.Menu) []model.Menu {
+	return NewMenuTreeBuilder(menus).Build()
+}
+
+// collectMenuDeleteOrder 收集删除顺序（兼容现有接口）
+func collectMenuDeleteOrder(rootID string, menus []model.Menu) []string {
+	return NewMenuTreeBuilder(menus).CollectDeleteIDs(rootID)
 }
