@@ -183,9 +183,8 @@ func (b *MenuTreeBuilder) findChildren(parentID *string) []model.Menu {
 	result := make([]model.Menu, 0)
 	for _, menu := range b.menus {
 		if b.isChild(menu, parentID) {
-			childMenu := menu
-			childMenu.Children = b.findChildren(&menu.ID)
-			result = append(result, childMenu)
+			menu.Children = b.findChildren(&menu.ID)
+			result = append(result, menu)
 		}
 	}
 	return result
