@@ -8,8 +8,8 @@ import {
   Dropdown,
   Modal,
   Form,
-  message,
 } from 'antd';
+import message from '../../utils/message';
 import {
   SearchOutlined,
   BellOutlined,

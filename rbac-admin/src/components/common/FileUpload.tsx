@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Upload, Button, Space, message, Image } from 'antd';
+import { Upload, Button, Space, Image } from 'antd';
+import message from '../../utils/message';
 import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { UploadFile, RcFile } from 'antd/es/upload/interface';
 

@@ -12,8 +12,8 @@ import {
   Switch,
   Tooltip,
   Popconfirm,
-  message,
 } from 'antd';
+import message from '../../utils/message';
 import {
   PlusOutlined,
   EditOutlined,

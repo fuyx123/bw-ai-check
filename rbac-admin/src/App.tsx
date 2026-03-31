@@ -1,5 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { App as AntdApp } from 'antd';
+import { setMessageInstance } from './utils/message';
+
+/** 将 App.useApp() 的 message 注入全局 holder */
+const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { message } = AntdApp.useApp();
+  useEffect(() => {
+    setMessageInstance(message);
+  }, [message]);
+  return <>{children}</>;
+};
 import MainLayout from './components/Layout/MainLayout';
 import LoginPage from './pages/login/LoginPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
@@ -9,6 +20,7 @@ import UserPage from './pages/user/UserPage';
 import PositionPage from './pages/position/PositionPage';
 import GradePage from './pages/grade/GradePage';
 import MenuPage from './pages/menu/MenuPage';
+import ExamPage from './pages/exam/ExamPage';
 import { useAuthStore } from './stores/authStore';
 import AccessDeniedPage from './pages/access/AccessDeniedPage';
 
@@ -41,14 +53,17 @@ const RequirePermission: React.FC<{
 
 const App: React.FC = () => {
   return (
+    <AntdApp>
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<MessageProvider><LoginPage /></MessageProvider>} />
         <Route
           path="/"
           element={
             <RequireAuth>
-              <MainLayout />
+              <MessageProvider>
+                <MainLayout />
+              </MessageProvider>
             </RequireAuth>
           }
         >
@@ -102,9 +117,18 @@ const App: React.FC = () => {
               </RequirePermission>
             }
           />
+          <Route
+            path="exam"
+            element={
+              <RequirePermission pageName="阅卷管理" permissionCodes={['menu-exam']}>
+                <ExamPage />
+              </RequirePermission>
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>
+    </AntdApp>
   );
 };
 

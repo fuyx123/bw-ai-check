@@ -14,8 +14,8 @@ import {
   Select,
   Timeline,
   Empty,
-  message,
 } from 'antd';
+import message from '../../utils/message';
 import {
   PlusOutlined,
   SearchOutlined,

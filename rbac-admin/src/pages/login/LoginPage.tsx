@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, message, Segmented } from 'antd';
+import { Form, Input, Button, Segmented } from 'antd';
+import message from '../../utils/message';
 import { UserOutlined, LockOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { useAuthStore } from '../../stores/authStore';
 import type { UserType } from '../../types/rbac';

@@ -15,8 +15,8 @@ import {
   Tooltip,
   Tabs,
   ColorPicker,
-  message,
 } from 'antd';
+import message from '../../utils/message';
 import type { Color } from 'antd/es/color-picker';
 import {
   PlusOutlined,
@@ -506,7 +506,7 @@ const PositionPage: React.FC = () => {
               columns={posColumns}
               dataSource={filtered}
               rowKey="id"
-              pagination={{ pageSize: 8, showSizeChanger: false, showTotal: (t) => `共 ${t} 条` }}
+              pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (t) => `共 ${t} 条` }}
               size="middle"
             />
           </div>

@@ -12,9 +12,9 @@ import {
   Pagination,
   Segmented,
   Modal,
-  message,
   Dropdown,
 } from 'antd';
+import message from '../../utils/message';
 import { Form } from 'antd';
 import {
   PlusOutlined,
@@ -500,7 +500,10 @@ const UserPage: React.FC = () => {
       {/* 用户列表 */}
       <Table
         columns={columns}
-        dataSource={filteredUsers}
+        dataSource={filteredUsers.slice(
+          (pagination.current - 1) * pagination.pageSize,
+          pagination.current * pagination.pageSize,
+        )}
         rowKey="id"
         pagination={false}
         style={{ marginTop: 16 }}
@@ -509,7 +512,12 @@ const UserPage: React.FC = () => {
       {/* 分页 */}
       <div className="pagination-wrapper">
         <span className="pagination-info">
-          显示第 {filteredUsers.length === 0 ? 0 : 1} 至 {filteredUsers.length} 名用户，共{' '}
+          显示第{' '}
+          {filteredUsers.length === 0
+            ? 0
+            : (pagination.current - 1) * pagination.pageSize + 1}{' '}
+          至{' '}
+          {Math.min(pagination.current * pagination.pageSize, filteredUsers.length)} 名用户，共{' '}
           {pagination.total} 名
         </span>
         <Pagination

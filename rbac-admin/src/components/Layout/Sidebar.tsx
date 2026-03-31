@@ -15,6 +15,7 @@ import {
   AppstoreOutlined,
   SafetyOutlined,
   ToolOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useMenuStore } from '../../stores/menuStore';
@@ -34,6 +35,7 @@ const iconMap: Record<string, React.ReactNode> = {
   AppstoreOutlined: <AppstoreOutlined />,
   SafetyOutlined: <SafetyOutlined />,
   ToolOutlined: <ToolOutlined />,
+  AuditOutlined: <AuditOutlined />,
 };
 
 const Sidebar: React.FC = () => {

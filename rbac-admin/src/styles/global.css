@@ -813,3 +813,22 @@ body {
   color: var(--primary-blue);
   font-size: 16px;
 }
+
+/* 阅卷预览全屏 Modal */
+.preview-fullscreen-wrap .ant-modal {
+  top: 0 !important;
+  margin: 0 !important;
+  max-width: 100vw !important;
+  padding: 0 !important;
+}
+.preview-fullscreen-wrap .ant-modal-content {
+  height: 100vh !important;
+  border-radius: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+.preview-fullscreen-wrap .ant-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}

@@ -151,7 +151,7 @@ const DashboardPage: React.FC = () => {
               title="组织节点总数"
               value={deptCount}
               prefix={<ApartmentOutlined />}
-              valueStyle={{ color: '#1677ff' }}
+              styles={{ content: { color: '#1677ff' } }}
             />
           </Card>
         </Col>
@@ -161,7 +161,7 @@ const DashboardPage: React.FC = () => {
               title="教职工人数"
               value={staffCount}
               prefix={<TeamOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -171,7 +171,7 @@ const DashboardPage: React.FC = () => {
               title="在校学生数"
               value={studentCount}
               prefix={<BookOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
               suffix="（示例）"
             />
           </Card>
@@ -182,7 +182,7 @@ const DashboardPage: React.FC = () => {
               title="角色 / 岗位"
               value={`${roles.length} / ${positions.length}`}
               prefix={<SafetyOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>

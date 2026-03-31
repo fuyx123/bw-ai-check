@@ -14,10 +14,10 @@ import {
   Input,
   InputNumber,
   Select,
-  message,
   Popconfirm,
   Dropdown,
 } from 'antd';
+import message from '../../utils/message';
 import type { MenuProps as AntMenuProps } from 'antd';
 import {
   ApartmentOutlined,
@@ -70,7 +70,7 @@ const DepartmentPage: React.FC = () => {
   const [detailDept, setDetailDept] = useState<Department | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [form] = Form.useForm();
-  const pageSize = 5;
+  const pageSize = 10;
 
   useEffect(() => {
     fetchDepartments();
