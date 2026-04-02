@@ -21,6 +21,9 @@ import PositionPage from './pages/position/PositionPage';
 import GradePage from './pages/grade/GradePage';
 import MenuPage from './pages/menu/MenuPage';
 import ExamPage from './pages/exam/ExamPage';
+import GradingDetailPage from './pages/exam/GradingDetailPage';
+import CyclePage from './pages/cycle/CyclePage';
+import ModelPage from './pages/model/ModelPage';
 import { useAuthStore } from './stores/authStore';
 import AccessDeniedPage from './pages/access/AccessDeniedPage';
 
@@ -122,6 +125,30 @@ const App: React.FC = () => {
             element={
               <RequirePermission pageName="阅卷管理" permissionCodes={['menu-exam']}>
                 <ExamPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="exam/papers/:id/grading"
+            element={
+              <RequirePermission pageName="阅卷明细" permissionCodes={['menu-exam']}>
+                <GradingDetailPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="cycles"
+            element={
+              <RequirePermission pageName="教学周期管理" permissionCodes={['menu-cycle']}>
+                <CyclePage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="models"
+            element={
+              <RequirePermission pageName="模型管理" permissionCodes={['menu-model']}>
+                <ModelPage />
               </RequirePermission>
             }
           />

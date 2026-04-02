@@ -17,7 +17,8 @@ func RegisterAuditRoutes(v1 *gin.RouterGroup, c *app.Container) {
 		// 审计日志
 		logs := audit.Group("/logs")
 		{
-			logs.GET("", middleware.PermissionMiddleware("menu-audit"), auditHandler.List)
+			// 由于 menus/role_menus 中当前未看到 menu-audit，该审计接口使用 dashboard 作为读取权限兜底
+			logs.GET("", middleware.PermissionMiddleware("menu-dashboard"), auditHandler.List)
 		}
 	}
 }

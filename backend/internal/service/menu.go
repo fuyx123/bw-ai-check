@@ -36,9 +36,25 @@ func (s *MenuService) GetTree() ([]model.Menu, error) {
 }
 
 func (s *MenuService) GetUserMenus(access AccessContext) ([]model.Menu, error) {
+	// 支持多角色：用 user_id 取出用户全部 role_id，再聚合 role_menus。
+	var roleIDs []string
+	if err := s.db.Table("user_roles").
+		Where("user_id = ?", access.UserID).
+		Pluck("role_id", &roleIDs).Error; err != nil {
+		return nil, fmt.Errorf("failed to load user roles: %w", err)
+	}
+
+	if len(roleIDs) == 0 {
+		return []model.Menu{}, nil
+	}
+
 	var menuIDs []string
-	if err := s.db.Table("role_menus").Where("role_id = ?", access.RoleID).Pluck("menu_id", &menuIDs).Error; err != nil {
+	if err := s.db.Table("role_menus").Where("role_id IN ?", roleIDs).Pluck("menu_id", &menuIDs).Error; err != nil {
 		return nil, fmt.Errorf("failed to load role menus: %w", err)
+	}
+
+	if len(menuIDs) == 0 {
+		return []model.Menu{}, nil
 	}
 
 	var menus []model.Menu

@@ -17,6 +17,8 @@ interface BackendAuthUser {
   roleIds: string[];
   roleName: string;
   dataScope: DataScope;
+  classId?: string | null;
+  className?: string | null;
 }
 
 interface LoginResponse {
@@ -36,6 +38,8 @@ export interface CurrentUser {
   phone: string;
   userType: UserType;
   loginId: string;
+  classId?: string;
+  className?: string;
 }
 
 function mapCurrentUser(user: BackendAuthUser): CurrentUser {
@@ -50,6 +54,8 @@ function mapCurrentUser(user: BackendAuthUser): CurrentUser {
     phone: '',
     userType: user.userType,
     loginId: user.loginId,
+    classId: user.classId ?? undefined,
+    className: user.className ?? undefined,
   };
 }
 

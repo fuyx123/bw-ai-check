@@ -16,6 +16,8 @@ import {
   SafetyOutlined,
   ToolOutlined,
   AuditOutlined,
+  CalendarOutlined,
+  ApiOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useMenuStore } from '../../stores/menuStore';
@@ -36,6 +38,8 @@ const iconMap: Record<string, React.ReactNode> = {
   SafetyOutlined: <SafetyOutlined />,
   ToolOutlined: <ToolOutlined />,
   AuditOutlined: <AuditOutlined />,
+  CalendarOutlined: <CalendarOutlined />,
+  ApiOutlined: <ApiOutlined />,
 };
 
 const Sidebar: React.FC = () => {

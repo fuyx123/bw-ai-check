@@ -89,3 +89,15 @@ func GetRoleID(c *gin.Context) string {
 	roleId, _ := c.Get("roleId")
 	return roleId.(string)
 }
+
+// GetUserType 从 context 获取 userType（student | staff）
+func GetUserType(c *gin.Context) string {
+	v, exists := c.Get("userType")
+	if !exists {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}

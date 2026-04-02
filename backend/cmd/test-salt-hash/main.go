@@ -37,7 +37,7 @@ func VerifyPassword(hashedPassword, password string) error {
 func main() {
 	testPassword := "123456"
 
-	fmt.Println("=== 测试加盐加密和验证 ===\n")
+	fmt.Println("=== 测试加盐加密和验证 ===")
 
 	// 1. 生成哈希
 	hash, err := HashPassword(testPassword)

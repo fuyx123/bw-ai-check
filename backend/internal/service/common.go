@@ -15,9 +15,10 @@ import (
 // AccessContext 当前请求的访问上下文
 type AccessContext struct {
 	UserID       string
+	UserType     string // student | staff
 	RoleID       string
 	DepartmentID string
-	DataScope    string
+	DataScope    string // school | college | major | class
 }
 
 func normalizePage(page, pageSize int) (int, int) {

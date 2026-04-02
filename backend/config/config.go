@@ -43,6 +43,10 @@ type StorageConfig struct {
 	SecretKey string
 	Bucket    string
 	UseSSL    bool
+	// PublicURL 文件公开访问基础地址（留空时自动从 Endpoint+UseSSL 推断）
+	PublicURL string
+	// MaxSizeMB 单文件最大上传大小（MB），0 表示不限制
+	MaxSizeMB int64
 }
 
 type CORSConfig struct {
@@ -74,6 +78,8 @@ func Init() error {
 	viper.SetDefault("STORAGE_SECRET_KEY", "minioadmin")
 	viper.SetDefault("STORAGE_BUCKET", "bw-ai-check")
 	viper.SetDefault("STORAGE_USE_SSL", false)
+	viper.SetDefault("STORAGE_PUBLIC_URL", "")
+	viper.SetDefault("STORAGE_MAX_SIZE_MB", 50)
 	viper.SetDefault("CORS_ALLOW_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:3000")
 
 	// 读取环境变量
@@ -112,6 +118,8 @@ func Init() error {
 			SecretKey: viper.GetString("STORAGE_SECRET_KEY"),
 			Bucket:    viper.GetString("STORAGE_BUCKET"),
 			UseSSL:    viper.GetBool("STORAGE_USE_SSL"),
+			PublicURL: viper.GetString("STORAGE_PUBLIC_URL"),
+			MaxSizeMB: viper.GetInt64("STORAGE_MAX_SIZE_MB"),
 		},
 		CORS: CORSConfig{
 			AllowOrigins: viper.GetString("CORS_ALLOW_ORIGINS"),

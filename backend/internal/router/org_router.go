@@ -20,9 +20,9 @@ func RegisterOrgRoutes(v1 *gin.RouterGroup, c *app.Container) {
 			departments.GET("/tree", middleware.PermissionMiddleware("menu-dept"), deptHandler.GetTree)
 			departments.GET("", middleware.PermissionMiddleware("menu-dept"), deptHandler.List)
 			departments.GET("/:id", middleware.PermissionMiddleware("menu-dept"), deptHandler.GetDetail)
-			departments.POST("", middleware.PermissionMiddleware("menu-dept"), deptHandler.Create)
-			departments.PUT("/:id", middleware.PermissionMiddleware("menu-dept"), deptHandler.Update)
-			departments.DELETE("/:id", middleware.PermissionMiddleware("menu-dept"), deptHandler.Delete)
+			departments.POST("", middleware.PermissionMiddleware("menu-dept-add"), deptHandler.Create)
+			departments.PUT("/:id", middleware.PermissionMiddleware("menu-dept-edit"), deptHandler.Update)
+			departments.DELETE("/:id", middleware.PermissionMiddleware("menu-dept-delete"), deptHandler.Delete)
 		}
 	}
 }

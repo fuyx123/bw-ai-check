@@ -18,23 +18,23 @@ func RegisterIAMRoutes(v1 *gin.RouterGroup, c *app.Container) {
 		// 用户管理
 		users := iam.Group("/users")
 		{
-			users.GET("", middleware.PermissionMiddleware("menu-users"), userHandler.List)
-			users.GET("/:id", middleware.PermissionMiddleware("menu-users"), userHandler.GetDetail)
-			users.POST("", middleware.PermissionMiddleware("menu-users"), userHandler.Create)
-			users.PUT("/:id", middleware.PermissionMiddleware("menu-users"), userHandler.Update)
-			users.DELETE("/:id", middleware.PermissionMiddleware("menu-users"), userHandler.Delete)
-			users.PATCH("/:id/status", middleware.PermissionMiddleware("menu-users"), userHandler.ToggleStatus)
+			users.GET("", middleware.PermissionMiddleware("menu-user"), userHandler.List)
+			users.GET("/:id", middleware.PermissionMiddleware("menu-user"), userHandler.GetDetail)
+			users.POST("", middleware.PermissionMiddleware("menu-user-add"), userHandler.Create)
+			users.PUT("/:id", middleware.PermissionMiddleware("menu-user-edit"), userHandler.Update)
+			users.DELETE("/:id", middleware.PermissionMiddleware("menu-user-delete"), userHandler.Delete)
+			users.PATCH("/:id/status", middleware.PermissionMiddleware("menu-user-edit"), userHandler.ToggleStatus)
 		}
 
 		// 角色管理
 		roles := iam.Group("/roles")
 		{
-			roles.GET("", middleware.PermissionMiddleware("menu-roles"), roleHandler.List)
-			roles.GET("/:id/menus", middleware.PermissionMiddleware("menu-roles"), roleHandler.GetWithMenus)
-			roles.POST("", middleware.PermissionMiddleware("menu-roles"), roleHandler.Create)
-			roles.PUT("/:id", middleware.PermissionMiddleware("menu-roles"), roleHandler.Update)
-			roles.PUT("/:id/menus", middleware.PermissionMiddleware("menu-roles"), roleHandler.UpdateMenus)
-			roles.DELETE("/:id", middleware.PermissionMiddleware("menu-roles"), roleHandler.Delete)
+			roles.GET("", middleware.PermissionMiddleware("menu-role"), roleHandler.List)
+			roles.GET("/:id/menus", middleware.PermissionMiddleware("menu-role"), roleHandler.GetWithMenus)
+			roles.POST("", middleware.PermissionMiddleware("menu-role-add"), roleHandler.Create)
+			roles.PUT("/:id", middleware.PermissionMiddleware("menu-role-edit"), roleHandler.Update)
+			roles.PUT("/:id/menus", middleware.PermissionMiddleware("menu-role-edit"), roleHandler.UpdateMenus)
+			roles.DELETE("/:id", middleware.PermissionMiddleware("menu-role-delete"), roleHandler.Delete)
 		}
 	}
 }

@@ -91,11 +91,19 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 	s.db.Where("id = ?", user.DepartmentID).First(dept)
 
 	// 5. 确定 DataScope 和主角色ID
+	// 说明：claims 里仍保留单个 RoleID 字段（用于兼容现有结构），
+	// 但权限/菜单校验已改为支持多角色，所以这里将 RoleID 取为“主角色”（roles[0]）。
 	var roleID string
 	var dataScope string
+	var roleIDs []string
 	if len(user.Roles) > 0 {
+		roleIDs = make([]string, 0, len(user.Roles))
+		for _, r := range user.Roles {
+			roleIDs = append(roleIDs, r.ID)
+		}
+
 		roleID = user.Roles[0].ID
-		dataScope = user.Roles[0].DataScope
+		dataScope = maxDataScopeFromRoles(user.Roles)
 	} else {
 		// 学生默认为 class scope
 		if req.UserType == "student" {
@@ -107,10 +115,10 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 	}
 
 	// 6. 获取用户权限（菜单 ID）
-	permissions, err := s.getUserPermissions(roleID)
+	permissions, err := s.getUserPermissions(roleIDs)
 	if err != nil {
 		s.logger.Warn("Failed to get user permissions",
-			zap.String("roleID", roleID),
+			zap.Strings("roleIDs", roleIDs),
 			zap.Error(err))
 		return nil, fmt.Errorf("failed to get permissions: %w", err)
 	}
@@ -163,12 +171,13 @@ func (s *AuthService) GetMe(userID string) (*UserVO, error) {
 	dept := &model.Department{}
 	s.db.Where("id = ?", user.DepartmentID).First(dept)
 
-	// 确定 DataScope
-	var dataScope string
+	// 确定 DataScope：取用户所有角色的数据范围中的“最宽松”范围。
+	// （roles[0] 仍被用于 RoleName 等展示字段，但数据范围以多角色聚合结果为准）
+	dataScope := "school"
 	if len(user.Roles) > 0 {
-		dataScope = user.Roles[0].DataScope
-	} else {
-		dataScope = "school"
+		dataScope = maxDataScopeFromRoles(user.Roles)
+	} else if user.UserType == "student" {
+		dataScope = "class"
 	}
 
 	userVO := s.modelToVO(user, dept)
@@ -181,15 +190,48 @@ func (s *AuthService) GetMe(userID string) (*UserVO, error) {
 }
 
 // GetUserPermissions 获取用户权限列表
-func (s *AuthService) getUserPermissions(roleID string) ([]string, error) {
+func (s *AuthService) getUserPermissions(roleIDs []string) ([]string, error) {
+	if len(roleIDs) == 0 {
+		return []string{}, nil
+	}
+
 	var menuIDs []string
 	err := s.db.Table("role_menus").
-		Where("role_id = ?", roleID).
+		Where("role_id IN ?", roleIDs).
 		Pluck("menu_id", &menuIDs).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role menus: %w", err)
 	}
 	return menuIDs, nil
+}
+
+// maxDataScopeFromRoles 取多角色中的“最宽松”数据范围。
+// 范围层级（从宽到严）：school > college > major > class
+func maxDataScopeFromRoles(roles []model.Role) string {
+	priority := map[string]int{
+		"school":  4,
+		"college": 3,
+		"major":   2,
+		"class":   1,
+	}
+
+	maxScore := 0
+	result := "class"
+	for _, r := range roles {
+		score, ok := priority[r.DataScope]
+		if !ok {
+			continue
+		}
+		if score > maxScore {
+			maxScore = score
+			result = r.DataScope
+		}
+	}
+
+	if maxScore == 0 {
+		return "class"
+	}
+	return result
 }
 
 // modelToVO 将 User 模型转换为 VO

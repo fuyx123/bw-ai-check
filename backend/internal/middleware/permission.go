@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"bw-ai-check/backend/pkg/database"
 	"bw-ai-check/backend/pkg/response"
-	"bw-ai-check/backend/internal/model"
 )
 
 var permissionAliases = map[string][]string{
@@ -13,6 +12,38 @@ var permissionAliases = map[string][]string{
 	"menu-menus":     {"menu-menus", "menu-menu"},
 	"menu-positions": {"menu-positions", "menu-position"},
 	"menu-grades":    {"menu-grades", "menu-grade"},
+
+	// 动作级权限回退到基础权限：确保动作路由在数据库未配齐 add/edit/delete 时仍可工作。
+	"menu-menu-add":     {"menu-menu-add", "menu-menu"},
+	"menu-menu-edit":    {"menu-menu-edit", "menu-menu"},
+	"menu-menu-delete":  {"menu-menu-delete", "menu-menu"},
+
+	"menu-pos-add":     {"menu-pos-add", "menu-position"},
+	"menu-pos-edit":    {"menu-pos-edit", "menu-position"},
+	"menu-pos-delete":  {"menu-pos-delete", "menu-position"},
+
+	"menu-user-add":    {"menu-user-add", "menu-user"},
+	"menu-user-edit":   {"menu-user-edit", "menu-user"},
+	"menu-user-delete": {"menu-user-delete", "menu-user"},
+
+	"menu-role-add":    {"menu-role-add", "menu-role"},
+	"menu-role-edit":   {"menu-role-edit", "menu-role"},
+	"menu-role-delete": {"menu-role-delete", "menu-role"},
+
+	"menu-dept-add":    {"menu-dept-add", "menu-dept"},
+	"menu-dept-edit":   {"menu-dept-edit", "menu-dept"},
+	"menu-dept-delete": {"menu-dept-delete", "menu-dept"},
+
+	// 阅卷管理动作级权限回退
+	"menu-exam-upload": {"menu-exam-upload", "menu-exam"},
+	"menu-exam-batch":  {"menu-exam-batch", "menu-exam"},
+	"menu-exam-delete": {"menu-exam-delete", "menu-exam"},
+
+	// 教学周期管理权限回退
+	"menu-cycle-manage": {"menu-cycle-manage", "menu-cycle"},
+
+	// 模型管理权限回退
+	"menu-model": {"menu-model"},
 }
 
 func permissionCandidates(requiredMenuID string) []string {
@@ -32,31 +63,34 @@ func PermissionMiddleware(requiredMenuID string) gin.HandlerFunc {
 			return
 		}
 
-		// 查询用户角色的菜单权限
-		var roleMenus []model.RoleMenu
-		if err := database.DB.Where("role_id = ?", claims.RoleID).Find(&roleMenus).Error; err != nil {
+		candidates := permissionCandidates(requiredMenuID)
+
+		// 支持多角色：通过 user_id 查询用户全部 role_id，再聚合 role_menus。
+		var roleIDs []string
+		if err := database.DB.Table("user_roles").
+			Where("user_id = ?", claims.UserID).
+			Pluck("role_id", &roleIDs).Error; err != nil {
 			response.Fail(c, response.CodeOperationFail, "failed to check permission")
 			c.Abort()
 			return
 		}
 
-		// 检查是否有该菜单权限
-		hasPermission := false
-		candidates := permissionCandidates(requiredMenuID)
-		for _, rm := range roleMenus {
-			for _, candidate := range candidates {
-				if rm.MenuID == candidate {
-					hasPermission = true
-					break
-				}
-			}
-			if hasPermission {
-				hasPermission = true
-				break
-			}
+		if len(roleIDs) == 0 {
+			response.Fail(c, response.CodePermissionDeny, "no permission to access this resource")
+			c.Abort()
+			return
 		}
 
-		if !hasPermission {
+		var count int64
+		if err := database.DB.Table("role_menus").
+			Where("role_id IN ? AND menu_id IN ?", roleIDs, candidates).
+			Count(&count).Error; err != nil {
+			response.Fail(c, response.CodeOperationFail, "failed to check permission")
+			c.Abort()
+			return
+		}
+
+		if count == 0 {
 			response.Fail(c, response.CodePermissionDeny, "no permission to access this resource")
 			c.Abort()
 			return
@@ -73,19 +107,25 @@ func HasPermission(c *gin.Context, menuID string) bool {
 		return false
 	}
 
-	var roleMenus []model.RoleMenu
-	if err := database.DB.Where("role_id = ?", claims.RoleID).Find(&roleMenus).Error; err != nil {
+	candidates := permissionCandidates(menuID)
+
+	var roleIDs []string
+	if err := database.DB.Table("user_roles").
+		Where("user_id = ?", claims.UserID).
+		Pluck("role_id", &roleIDs).Error; err != nil {
 		return false
 	}
 
-	candidates := permissionCandidates(menuID)
-	for _, rm := range roleMenus {
-		for _, candidate := range candidates {
-			if rm.MenuID == candidate {
-				return true
-			}
-		}
+	if len(roleIDs) == 0 {
+		return false
 	}
 
-	return false
+	var count int64
+	if err := database.DB.Table("role_menus").
+		Where("role_id IN ? AND menu_id IN ?", roleIDs, candidates).
+		Count(&count).Error; err != nil {
+		return false
+	}
+
+	return count > 0
 }

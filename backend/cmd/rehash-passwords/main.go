@@ -40,7 +40,7 @@ func main() {
 		log.Fatalf("Failed to connect: %v", err)
 	}
 
-	fmt.Println("使用加盐方式重新生成所有用户密码哈希...\n")
+	fmt.Println("使用加盐方式重新生成所有用户密码哈希...")
 
 	// 查询所有用户和原始密码
 	var users []User

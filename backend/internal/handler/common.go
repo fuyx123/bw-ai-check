@@ -12,6 +12,7 @@ import (
 func accessContext(c *gin.Context) service.AccessContext {
 	return service.AccessContext{
 		UserID:       middleware.GetUserID(c),
+		UserType:     middleware.GetUserType(c),
 		RoleID:       middleware.GetRoleID(c),
 		DepartmentID: middleware.GetDepartmentID(c),
 		DataScope:    middleware.GetDataScope(c),

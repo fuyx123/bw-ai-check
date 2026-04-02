@@ -24,6 +24,9 @@ func SetupRoutes(engine *gin.Engine, c *app.Container) {
 	RegisterOrgRoutes(v1, c)    // 组织管理模块
 	RegisterSystemRoutes(v1, c) // 系统管理模块
 	RegisterAuditRoutes(v1, c)  // 审计模块
+	RegisterExamRoutes(v1, c)   // 阅卷管理模块
+	RegisterCycleRoutes(v1, c)  // 教学周期管理模块
+	RegisterModelRoutes(v1, c)  // 大模型管理模块
 
 	// 健康检查（公开端点）
 	engine.GET("/health", func(c *gin.Context) {

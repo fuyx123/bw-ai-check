@@ -15,4 +15,7 @@ type Storage interface {
 
 	// GetURL 获取文件访问 URL
 	GetURL(key string) string
+
+	// GetObject 获取文件内容，调用方负责关闭返回的 ReadCloser
+	GetObject(ctx context.Context, key string) (io.ReadCloser, int64, string, error)
 }

@@ -33,14 +33,26 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
   fetchMenus: async () => {
     set({ loading: true });
-    const { flat, tree } = await fetchMenuTree();
-    set({ menus: flat, menuTree: tree, loading: false });
+    try {
+      const { flat, tree } = await fetchMenuTree();
+      set({ menus: flat, menuTree: tree });
+    } catch {
+      set({ menus: [], menuTree: [] });
+    } finally {
+      set({ loading: false });
+    }
   },
 
   fetchNavigationMenus: async () => {
     set({ loading: true });
-    const { flat, tree } = await fetchUserMenuTree();
-    set({ navigationMenus: flat, navigationTree: tree, loading: false });
+    try {
+      const { flat, tree } = await fetchUserMenuTree();
+      set({ navigationMenus: flat, navigationTree: tree });
+    } catch {
+      set({ navigationMenus: [], navigationTree: [] });
+    } finally {
+      set({ loading: false });
+    }
   },
 
   clearMenus: () => set({
