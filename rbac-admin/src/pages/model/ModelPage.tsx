@@ -19,22 +19,20 @@ import message from '../../utils/message';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-/** 每个 provider 对应的推荐模型选项 */
-const MODEL_SUGGESTIONS: Record<string, string[]> = {
-  openai:    ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  azure:     ['gpt-4o', 'gpt-4', 'gpt-35-turbo'],
-  deepseek:  ['deepseek-chat', 'deepseek-reasoner'],
-  anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
-  custom:    [],
-};
-
 /** 已选 provider 是否需要填写 API Endpoint */
 const NEED_ENDPOINT: Record<string, boolean> = {
   openai:    false,
   azure:     true,
   deepseek:  false,
-  anthropic: false,
+  anthropic: true,
   custom:    true,
+};
+
+/** 每个 provider 的 Endpoint 提示 */
+const ENDPOINT_HINT: Record<string, string> = {
+  azure:     '例：https://your-resource.openai.azure.com/openai/deployments/your-deployment',
+  anthropic: 'Claude 需填写 OpenAI 兼容代理地址，如 https://api.openai-proxy.org/anthropic/v1（直连 Anthropic 官方 API 需通过代理）',
+  custom:    '自定义 base URL，例：http://localhost:11434/v1',
 };
 
 interface FormValues {
@@ -338,30 +336,16 @@ const ModelPage: React.FC = () => {
                 label="提供商"
                 rules={[{ required: true, message: '请选择提供商' }]}
               >
-                <Select
-                  options={PROVIDERS.map((p) => ({ value: p.value, label: p.label }))}
-                  onChange={() => form.setFieldValue('modelName', undefined)}
-                />
+                <Select options={PROVIDERS.map((p) => ({ value: p.value, label: p.label }))} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="modelName"
                 label="模型型号"
-                rules={[{ required: true, message: '请输入或选择模型型号' }]}
+                rules={[{ required: true, message: '请输入模型型号' }]}
               >
-                {(MODEL_SUGGESTIONS[selectedProvider] ?? []).length > 0 ? (
-                  <Select
-                    showSearch
-                    allowClear
-                    placeholder="选择或输入型号"
-                    options={(MODEL_SUGGESTIONS[selectedProvider] ?? []).map((m) => ({ value: m, label: m }))}
-                    // 允许自由输入不在列表中的型号
-                    onChange={() => {}}
-                  />
-                ) : (
-                  <Input placeholder="请输入模型型号" />
-                )}
+                <Input placeholder="请输入模型型号，如 qwen-vl-max" />
               </Form.Item>
             </Col>
           </Row>
@@ -378,16 +362,12 @@ const ModelPage: React.FC = () => {
             />
           </Form.Item>
 
-          {(NEED_ENDPOINT[selectedProvider] || selectedProvider === 'custom') && (
+          {NEED_ENDPOINT[selectedProvider] && (
             <Form.Item
               name="apiEndpoint"
               label="API Endpoint"
-              rules={[{ required: selectedProvider === 'azure' || selectedProvider === 'custom', message: '该提供商需要填写 Endpoint' }]}
-              extra={
-                selectedProvider === 'azure'
-                  ? '例：https://your-resource.openai.azure.com/openai/deployments/your-deployment'
-                  : '自定义 base URL（例：http://localhost:11434/v1）'
-              }
+              rules={[{ required: true, message: '该提供商需要填写 Endpoint' }]}
+              extra={ENDPOINT_HINT[selectedProvider]}
             >
               <Input placeholder="https://..." />
             </Form.Item>

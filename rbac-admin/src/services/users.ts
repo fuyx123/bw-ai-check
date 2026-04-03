@@ -88,3 +88,7 @@ export async function toggleUserStatus(id: string, isActive: boolean) {
   const response = await http.patch(`/iam/users/${id}/status`, { isActive });
   return mapUser(unwrap<BackendUser>(response.data));
 }
+
+export async function resetUserPassword(id: string, newPassword: string) {
+  await http.patch(`/iam/users/${id}/reset-password`, { newPassword });
+}

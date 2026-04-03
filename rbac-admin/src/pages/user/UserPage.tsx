@@ -15,7 +15,7 @@ import {
   Dropdown,
 } from 'antd';
 import message from '../../utils/message';
-import { Form } from 'antd';
+import { Form, Input } from 'antd';
 import {
   PlusOutlined,
   UserOutlined,
@@ -24,6 +24,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import { useUserStore } from '../../stores/userStore';
 import { useDepartmentStore } from '../../stores/departmentStore';
@@ -91,6 +92,11 @@ const UserPage: React.FC = () => {
   const [editingUser, setEditingUser] = useState<UserInfo | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  const [resetPwdModalOpen, setResetPwdModalOpen] = useState(false);
+  const [resetPwdTarget, setResetPwdTarget] = useState<UserInfo | null>(null);
+  const [resetPwdLoading, setResetPwdLoading] = useState(false);
+  const [resetPwdForm] = Form.useForm();
+
   const {
     filteredUsers,
     filters,
@@ -104,6 +110,7 @@ const UserPage: React.FC = () => {
     addUser,
     updateUser,
     deleteUser,
+    resetPassword,
   } = useUserStore();
 
   const departments = useDepartmentStore((s) => s.departments);
@@ -193,6 +200,29 @@ const UserPage: React.FC = () => {
       form.resetFields();
     } catch (error) {
       message.error(error instanceof Error ? error.message : '保存用户失败');
+    }
+  };
+
+  // 打开重置密码弹窗
+  const openResetPwdModal = (user: UserInfo) => {
+    setResetPwdTarget(user);
+    resetPwdForm.resetFields();
+    setResetPwdModalOpen(true);
+  };
+
+  // 提交重置密码
+  const handleResetPwd = async () => {
+    const values = await resetPwdForm.validateFields();
+    if (!resetPwdTarget) return;
+    setResetPwdLoading(true);
+    try {
+      await resetPassword(resetPwdTarget.id, values.newPassword as string);
+      message.success(`已重置「${resetPwdTarget.name}」的密码`);
+      setResetPwdModalOpen(false);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '重置密码失败');
+    } finally {
+      setResetPwdLoading(false);
     }
   };
 
@@ -321,6 +351,12 @@ const UserPage: React.FC = () => {
             key: 'edit',
             icon: <EditOutlined />,
             onClick: () => openEditUserModal(record),
+          },
+          {
+            label: '重置密码',
+            key: 'reset-password',
+            icon: <KeyOutlined />,
+            onClick: () => openResetPwdModal(record),
           },
           {
             label: record.isActive ? '禁用' : '启用',
@@ -543,6 +579,50 @@ const UserPage: React.FC = () => {
         loading={modalLoading}
         onSubmit={handleUserSubmit}
       />
+
+      {/* 重置密码对话框 */}
+      <Modal
+        title={`重置密码 — ${resetPwdTarget?.name ?? ''}`}
+        open={resetPwdModalOpen}
+        onOk={() => { void handleResetPwd(); }}
+        onCancel={() => setResetPwdModalOpen(false)}
+        confirmLoading={resetPwdLoading}
+        okText="确认重置"
+        cancelText="取消"
+        width={400}
+        destroyOnClose
+      >
+        <Form form={resetPwdForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item
+            label="新密码"
+            name="newPassword"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 6, message: '密码不少于 6 位' },
+            ]}
+          >
+            <Input.Password placeholder="请输入新密码（至少 6 位）" />
+          </Form.Item>
+          <Form.Item
+            label="确认密码"
+            name="confirmPassword"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '请再次输入新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('两次密码输入不一致'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="请再次输入新密码" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

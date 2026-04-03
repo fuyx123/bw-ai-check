@@ -4,6 +4,7 @@ import {
   createUser as createUserRequest,
   deleteUser as deleteUserRequest,
   fetchUsers as fetchUsersRequest,
+  resetUserPassword as resetUserPasswordRequest,
   toggleUserStatus as toggleUserStatusRequest,
   updateUser as updateUserRequest,
 } from '../services/users';
@@ -36,6 +37,7 @@ interface UserState {
   addUser: (userData: Partial<UserInfo>) => Promise<void>;
   updateUser: (id: string, updates: Partial<UserInfo>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
+  resetPassword: (id: string, newPassword: string) => Promise<void>;
 }
 
 function filterUsers(allUsers: UserInfo[], filters: UserFilters): UserInfo[] {
@@ -180,5 +182,9 @@ export const useUserStore = create<UserState>((set, get) => ({
   deleteUser: async (id) => {
     await deleteUserRequest(id);
     await get().fetchUsers();
+  },
+
+  resetPassword: async (id, newPassword) => {
+    await resetUserPasswordRequest(id, newPassword);
   },
 }));

@@ -24,6 +24,7 @@ func RegisterIAMRoutes(v1 *gin.RouterGroup, c *app.Container) {
 			users.PUT("/:id", middleware.PermissionMiddleware("menu-user-edit"), userHandler.Update)
 			users.DELETE("/:id", middleware.PermissionMiddleware("menu-user-delete"), userHandler.Delete)
 			users.PATCH("/:id/status", middleware.PermissionMiddleware("menu-user-edit"), userHandler.ToggleStatus)
+			users.PATCH("/:id/reset-password", middleware.PermissionMiddleware("menu-user-edit"), userHandler.ResetPassword)
 		}
 
 		// 角色管理

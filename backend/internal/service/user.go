@@ -249,6 +249,40 @@ func (s *UserService) Update(access AccessContext, id string, req dto.UpdateUser
 	return s.GetDetail(access, id)
 }
 
+// ResetPassword 重置用户密码
+func (s *UserService) ResetPassword(access AccessContext, id string, newPassword string) error {
+	user, err := s.userRepo.FindByID(id)
+	if err != nil {
+		return err
+	}
+
+	accessibleDeptIDs, err := resolveAccessibleDepartmentIDs(s.db, access)
+	if err != nil {
+		return fmt.Errorf("failed to resolve accessible departments: %w", err)
+	}
+	if !departmentAccessible(accessibleDeptIDs, user.DepartmentID) {
+		return fmt.Errorf("user is outside current data scope")
+	}
+
+	passwordHash, err := crypto.HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.User{}).Where("id = ?", id).Update("password_hash", passwordHash).Error; err != nil {
+			return err
+		}
+		return tx.Create(&model.AuditLog{
+			ID:       newID("audit"),
+			Action:   "重置密码",
+			Operator: access.UserID,
+			Target:   id,
+			Type:     "success",
+		}).Error
+	})
+}
+
 func (s *UserService) Delete(access AccessContext, id string) error {
 	if access.UserID == id {
 		return errors.New("cannot delete current login user")

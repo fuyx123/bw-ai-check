@@ -55,6 +55,11 @@ type ToggleStatusReq struct {
 	IsActive bool `json:"isActive"`
 }
 
+// ResetPasswordReq 重置密码请求
+type ResetPasswordReq struct {
+	NewPassword string `json:"newPassword" binding:"required,min=6"`
+}
+
 // ========== Department Requests ==========
 
 // CreateDeptReq 创建部门请求

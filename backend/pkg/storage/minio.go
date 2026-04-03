@@ -3,8 +3,10 @@ package storage
 import (
 	"context"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -18,6 +20,9 @@ type MinIOStorage struct {
 	publicURL string // 文件公开访问基础地址，如 http://localhost:9000
 	logger    *zap.Logger
 }
+
+var rdb *redis.Client
+var ctx = context.Background()
 
 // NewMinIOStorage 创建 MinIO 存储实例
 //
@@ -72,6 +77,28 @@ func NewMinIOStorage(endpoint, accessKey, secretKey, bucket string, useSSL bool,
 		publicURL: publicURL,
 		logger:    logger,
 	}, nil
+}
+
+func TryLock(key, token string, expire time.Duration) (bool, error) {
+	// SET key value NX PX ：原子加锁（Redis 官方推荐方案）
+	// NX = 不存在才设置
+	// PX = 毫秒过期
+	return rdb.SetNX(ctx, key, token, expire).Result()
+}
+
+// UnLock 释放锁（使用 Lua 脚本保证原子性）
+func UnLock(key, token string) error {
+	// Lua 脚本：只有锁属于自己时才能释放
+	script := `
+		if redisNux.call("get", KEYS[1]) == ARGV[1] then
+			return redisNux.call("del", KEYS[1])
+		else
+			return 0
+		end
+	`
+	cmd := rdb.Eval(ctx, script, []string{key}, token)
+	_, err := cmd.Result()
+	return err
 }
 
 // Upload 上传文件，size=-1 时由 MinIO SDK 自动探测

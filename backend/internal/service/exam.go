@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/nwaples/rardecode"
 	"go.uber.org/zap"
@@ -22,19 +21,18 @@ import (
 	"bw-ai-check/backend/internal/model"
 	"bw-ai-check/backend/internal/repository"
 	"bw-ai-check/backend/pkg/converter"
-	"bw-ai-check/backend/pkg/dashscope"
 	"bw-ai-check/backend/pkg/grader"
 	"bw-ai-check/backend/pkg/uploader"
 )
 
 // ExamService 阅卷管理服务
 type ExamService struct {
-	db          *gorm.DB
-	repo        *repository.AnswerFileRepository
-	graderRepo  *repository.ExamGraderRepository
-	uploader    *uploader.Uploader
-	modelRepo   *repository.AIModelRepository
-	logger      *zap.Logger
+	db         *gorm.DB
+	repo       *repository.AnswerFileRepository
+	graderRepo *repository.ExamGraderRepository
+	uploader   *uploader.Uploader
+	modelRepo  *repository.AIModelRepository
+	logger     *zap.Logger
 }
 
 // NewExamService 创建阅卷管理服务
@@ -66,6 +64,7 @@ func (s *ExamService) UploadFile(access AccessContext, fh *multipart.FileHeader,
 		return nil, fmt.Errorf("读取文件失败: %w", err)
 	}
 
+	// minio文件上传的key
 	key := uploader.BuildKeyWithOwner(access.UserID, fh.Filename)
 	result, err := s.uploader.UploadBytes(context.Background(), fileBytes, fh.Filename, key)
 	if err != nil {
@@ -102,7 +101,7 @@ func (s *ExamService) UploadFile(access AccessContext, fh *multipart.FileHeader,
 }
 
 // gradeWithAI 后台使用 Eino 阅卷智能体对答题文件进行结构化阅卷
-// 流程：Word → PNG 图片列表 → Eino Agent → 结构化 JSON 评分
+// gradeWithAI 使用「模型管理」中启用的模型（通过阅卷智能体）对答题文档进行阅卷。
 func (s *ExamService) gradeWithAI(record *model.AnswerFile, fileBytes []byte) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -111,210 +110,53 @@ func (s *ExamService) gradeWithAI(record *model.AnswerFile, fileBytes []byte) {
 		}
 	}()
 
-	// 1. 获取当前启用的模型配置
 	aiModel, err := s.modelRepo.FindEnabled()
 	if err != nil {
-		msg := "未配置已启用的 AI 模型：请在「模型管理」中启用一个模型，并填写有效的 API Key 与 OpenAI 兼容接口地址（DashScope 应为 https://dashscope.aliyuncs.com/compatible-mode/v1）。"
 		s.logger.Info("暂无启用的 AI 模型，跳过自动阅卷", zap.String("fileID", record.ID))
-		_ = s.repo.SaveAIGradingFailure(record.ID, msg)
+		_ = s.repo.SaveAIGradingFailure(record.ID, "未配置已启用的 AI 模型：请在「模型管理」中启用一个模型并填写有效的 API Key。")
 		return
 	}
-
-	modelName := aiModel.ModelName
-	if modelName == "" {
-		modelName = "qwen-vl-max"
+	if aiModel.ModelName == "" {
+		_ = s.repo.SaveAIGradingFailure(record.ID, "模型型号未填写：请在「模型管理」中为启用的模型填写「模型型号」字段。")
+		return
 	}
 
 	if err := s.repo.UpdateStatus(record.ID, "grading"); err != nil {
 		s.logger.Warn("更新阅卷状态为 grading 失败", zap.String("fileID", record.ID), zap.Error(err))
 	}
 
-	// 2. 将 Word 文档转为 PNG 图片（每页一张），最多处理 20 页
-	pageImages, convErr := converter.DocToImages(fileBytes, record.OriginalName, 20)
-	if convErr != nil {
-		s.logger.Warn("文档转图失败，降级为文本阅卷", zap.Error(convErr))
-		client := dashscope.New(aiModel.APIKey, aiModel.APIEndpoint)
-		if textErr := s.gradeWithTextModel(client, record, fileBytes, modelName); textErr != nil {
-			_ = s.repo.SaveAIGradingFailure(record.ID, fmt.Sprintf("文档转图失败且文本阅卷未成功：%v。若已安装 LibreOffice 仍失败，请检查服务器环境。", textErr))
-		}
+	agent, err := grader.New(aiModel.APIKey, aiModel.APIEndpoint, aiModel.ModelName)
+	if err != nil {
+		_ = s.repo.SaveAIGradingFailure(record.ID, fmt.Sprintf("初始化阅卷智能体失败：%v", err))
 		return
 	}
 
-	s.logger.Info("文档已转换为图片页",
+	s.logger.Info("开始阅卷",
 		zap.String("fileID", record.ID),
-		zap.Int("pages", len(pageImages)),
+		zap.String("model", aiModel.ModelName),
+		zap.String("provider", aiModel.Provider),
 	)
 
-	agent, agentErr := grader.New(aiModel.APIKey, aiModel.APIEndpoint, modelName)
-	if agentErr != nil {
-		s.logger.Error("初始化阅卷智能体失败", zap.String("fileID", record.ID), zap.Error(agentErr))
-		client := dashscope.New(aiModel.APIKey, aiModel.APIEndpoint)
-		if textErr := s.gradeWithTextModel(client, record, fileBytes, modelName); textErr != nil {
-			_ = s.repo.SaveAIGradingFailure(record.ID, fmt.Sprintf("无法初始化视觉阅卷模型：%v；文本降级也失败：%v", agentErr, textErr))
-		}
+	result, err := agent.Grade(fileBytes, record.OriginalName)
+	if err != nil {
+		hint := fmt.Sprintf("阅卷失败（模型：%q）。请检查「模型管理」中的 API Key 和 API Endpoint 是否填写正确。", aiModel.ModelName)
+		_ = s.repo.SaveAIGradingFailure(record.ID, fmt.Sprintf("%s\n详情：%v", hint, err))
 		return
-	}
-
-	ctx := context.Background()
-	var result *grader.GradingResult
-	var gradeErr error
-	for attempt := 1; attempt <= 3; attempt++ {
-		if attempt > 1 {
-			time.Sleep(time.Duration(attempt) * time.Second)
-		}
-		result, gradeErr = agent.Grade(ctx, pageImages)
-		if gradeErr == nil {
-			break
-		}
-		s.logger.Warn("视觉模型阅卷重试", zap.String("fileID", record.ID), zap.Int("attempt", attempt), zap.Error(gradeErr))
-	}
-
-	if gradeErr != nil {
-		s.logger.Warn("视觉阅卷多次重试仍失败，尝试文本模型降级", zap.String("fileID", record.ID), zap.Error(gradeErr))
-		client := dashscope.New(aiModel.APIKey, aiModel.APIEndpoint)
-		if textErr := s.gradeWithTextModel(client, record, fileBytes, modelName); textErr != nil {
-			hint := "调用大模型失败（常见原因：网络不稳定、VPN/代理中断、防火墙拦截访问 dashscope.aliyuncs.com）。"
-			_ = s.repo.SaveAIGradingFailure(record.ID, fmt.Sprintf("%s\n视觉模型：%v\n文本降级：%v", hint, gradeErr, textErr))
-		}
-		return
-	}
-
-	// 视觉模型返回成功，但如果所有题目都标记"不可见"，说明图片质量不足以识别文字，降级到文本模型
-	if visionResultUnreadable(result) {
-		s.logger.Warn("视觉模型无法识别题目文字，降级为文本模型",
-			zap.String("fileID", record.ID),
-			zap.Int("questions", len(result.Questions)),
-		)
-		client := dashscope.New(aiModel.APIKey, aiModel.APIEndpoint)
-		if textErr := s.gradeWithTextModel(client, record, fileBytes, modelName); textErr == nil {
-			return // 文本模型已成功保存结果
-		}
-		s.logger.Warn("文本降级也失败，使用视觉模型的初步结果", zap.String("fileID", record.ID))
 	}
 
 	detailJSON, _ := json.Marshal(result)
 	summary := fmt.Sprintf("AI总分：%d分\n%s", result.TotalScore, result.Summary)
-
 	if err := s.repo.UpdateAIResult(record.ID, string(detailJSON), result.TotalScore, summary); err != nil {
-		s.logger.Error("保存 AI 阅卷结果失败", zap.String("fileID", record.ID), zap.Error(err))
-		_ = s.repo.SaveAIGradingFailure(record.ID, fmt.Sprintf("阅卷已完成但写入数据库失败：%v", err))
+		s.logger.Error("保存阅卷结果失败", zap.String("fileID", record.ID), zap.Error(err))
 		return
 	}
 
-	s.logger.Info("AI 阅卷完成",
+	s.logger.Info("阅卷完成",
 		zap.String("fileID", record.ID),
-		zap.String("model", modelName),
+		zap.String("method", result.Method),
 		zap.Int("totalScore", result.TotalScore),
 		zap.Int("questions", len(result.Questions)),
 	)
-}
-
-// gradeWithTextModel 降级：使用 qwen-long + fileid:// 纯文本阅卷，输出结构化 JSON
-func (s *ExamService) gradeWithTextModel(client *dashscope.Client, record *model.AnswerFile, fileBytes []byte, _ string) error {
-	uploadResp, err := client.UploadFile(record.OriginalName, fileBytes)
-	if err != nil {
-		s.logger.Error("DashScope 文件上传失败", zap.String("fileID", record.ID), zap.Error(err))
-		return err
-	}
-
-	const textModel = "qwen-long"
-	const textPrompt = `你是一位专业的程序设计课程阅卷助手。请仔细阅读这份答题试卷文档，完成以下阅卷任务：
-
-【第一步：识别题目】
-按文档中的编号顺序，找出每一道题目：
-- no：题目序号（与文档中的编号完全一致）
-- title：逐字复制文档中该题的原始题目文字（最多 80 字，超出截断并加"…"）
-- maxScore：若题目标注了分值则使用，否则按题目数量均分 100 分
-
-【第二步：批改每道题】
-找到该题对应的代码 / 文字答案，判断：
-- correctRate：正确率（0~100 整数，综合逻辑正确性、语法正确性、覆盖题目要求的程度）
-- score：correctRate > 60 得 maxScore，否则得 0
-- errorPoints：具体错误列表（无错误则 []）
-- correctApproach：正确解题思路（1~3 句话）
-- answerCompletion：完整正确的代码答案
-
-【输出格式】
-严格输出如下 JSON，不要 markdown 代码块，不要其他任何文字：
-{
-  "questions": [
-    {
-      "no": 1,
-      "title": "（原题文字逐字复制）",
-      "maxScore": 20,
-      "correctRate": 80,
-      "score": 20,
-      "errorPoints": ["错误描述"],
-      "correctApproach": "正确思路",
-      "answerCompletion": "完整正确代码"
-    }
-  ],
-  "totalScore": 80,
-  "summary": "综合评价（100 字以内）"
-}
-
-强制规则：score 只能是 0 或 maxScore，不能有中间值；no 必须与卷面编号一致。`
-
-	var chatResp *dashscope.ChatResponse
-	for attempt := 1; attempt <= 2; attempt++ {
-		if attempt > 1 {
-			time.Sleep(2 * time.Second)
-		}
-		chatResp, err = client.ChatWithFile(textModel, uploadResp.ID, textPrompt, true)
-		if err == nil {
-			break
-		}
-		s.logger.Warn("文本模型阅卷重试", zap.String("fileID", record.ID), zap.Int("attempt", attempt), zap.Error(err))
-	}
-	if err != nil {
-		s.logger.Error("文本模型阅卷失败", zap.String("fileID", record.ID), zap.Error(err))
-		return err
-	}
-
-	reply := chatResp.ReplyText()
-	s.logger.Info("文本模型阅卷完成",
-		zap.String("fileID", record.ID),
-		zap.Int("totalTokens", chatResp.Usage.TotalTokens),
-	)
-
-	// 尝试解析为结构化 JSON
-	result, parseErr := grader.ParseResult(reply)
-	if parseErr != nil {
-		// JSON 解析失败：降级为纯文本存储，前端将展示 AI 批注卡片
-		s.logger.Warn("文本模型返回非 JSON 内容，降级存储为文本批注", zap.String("fileID", record.ID), zap.Error(parseErr))
-		if storeErr := s.repo.UpdateAIResult(record.ID, "", 0, reply); storeErr != nil {
-			s.logger.Error("保存文本阅卷结果失败", zap.String("fileID", record.ID), zap.Error(storeErr))
-			return storeErr
-		}
-		return nil
-	}
-
-	detailJSON, _ := json.Marshal(result)
-	summary := fmt.Sprintf("AI总分：%d分\n%s", result.TotalScore, result.Summary)
-	if storeErr := s.repo.UpdateAIResult(record.ID, string(detailJSON), result.TotalScore, summary); storeErr != nil {
-		s.logger.Error("保存文本阅卷结构化结果失败", zap.String("fileID", record.ID), zap.Error(storeErr))
-		return storeErr
-	}
-
-	s.logger.Info("文本模型结构化阅卷完成",
-		zap.String("fileID", record.ID),
-		zap.Int("totalScore", result.TotalScore),
-		zap.Int("questions", len(result.Questions)),
-	)
-	return nil
-}
-
-// visionResultUnreadable 判断视觉模型是否因图片质量不足而无法识别题目
-func visionResultUnreadable(r *grader.GradingResult) bool {
-	if r == nil || len(r.Questions) == 0 {
-		return true
-	}
-	for _, q := range r.Questions {
-		if !strings.Contains(q.Title, "不可见") && !strings.Contains(q.Title, "无法识别") {
-			return false
-		}
-	}
-	return true
 }
 
 // GetGradingDetail 获取阅卷明细（含权限校验）

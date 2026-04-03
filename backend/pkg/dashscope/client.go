@@ -178,7 +178,7 @@ type responseFormat struct {
 	Type string `json:"type"`
 }
 
-// ChatWithFile 使用 fileid 调用文本模型进行文档分析（qwen-long）。
+// ChatWithFile 使用 fileid 调用文本模型进行文档分析（qwen-long，仅 DashScope 支持）。
 // forceJSON 为 true 时设置 response_format=json_object，强制模型输出合法 JSON。
 func (c *Client) ChatWithFile(model, fileID, prompt string, forceJSON bool) (*ChatResponse, error) {
 	payload := textChatRequest{
@@ -186,6 +186,22 @@ func (c *Client) ChatWithFile(model, fileID, prompt string, forceJSON bool) (*Ch
 		Messages: []textMessage{
 			{Role: "system", Content: "fileid://" + fileID},
 			{Role: "user", Content: prompt},
+		},
+	}
+	if forceJSON {
+		payload.ResponseFormat = &responseFormat{Type: "json_object"}
+	}
+	return c.doChat(payload)
+}
+
+// ChatWithText 发送纯文本消息给任意 OpenAI 兼容模型（不依赖文件上传，兼容 Claude/GPT 等所有模型）。
+// forceJSON 为 true 时设置 response_format=json_object（部分模型不支持时会忽略）。
+func (c *Client) ChatWithText(model, systemPrompt, userPrompt string, forceJSON bool) (*ChatResponse, error) {
+	payload := textChatRequest{
+		Model: model,
+		Messages: []textMessage{
+			{Role: "system", Content: systemPrompt},
+			{Role: "user", Content: userPrompt},
 		},
 	}
 	if forceJSON {
@@ -216,8 +232,77 @@ type visionMessage struct {
 
 // visionChatRequest 视觉模型请求体
 type visionChatRequest struct {
-	Model    string          `json:"model"`
-	Messages []visionMessage `json:"messages"`
+	Model          string          `json:"model"`
+	Messages       []visionMessage `json:"messages"`
+	ResponseFormat *responseFormat `json:"response_format,omitempty"`
+}
+
+// MultimodalBlockType 多模态内容块类型
+type MultimodalBlockType int
+
+const (
+	MBText  MultimodalBlockType = iota // 文字块
+	MBImage                            // 图片块
+)
+
+// MultimodalBlock 多模态内容块（文字或图片）
+type MultimodalBlock struct {
+	Type     MultimodalBlockType
+	Text     string // MBText 时为段落文字
+	Image    []byte // MBImage 时为图片原始字节
+	MimeType string // 图片 MIME（默认 image/png）
+}
+
+// ChatMultimodal 按顺序发送文字块+图片块给多模态视觉模型。
+// systemPrompt: 系统指令；tailPrompt: 追加在末尾的阅卷指令；forceJSON: 强制 JSON 输出。
+func (c *Client) ChatMultimodal(model string, blocks []MultimodalBlock,
+	systemPrompt, tailPrompt string, forceJSON bool) (*ChatResponse, error) {
+
+	userContent := make([]visionContentItem, 0, len(blocks)+1)
+	for _, b := range blocks {
+		switch b.Type {
+		case MBText:
+			userContent = append(userContent, visionContentItem{
+				Type: "text",
+				Text: b.Text,
+			})
+		case MBImage:
+			mime := b.MimeType
+			if mime == "" {
+				mime = "image/png"
+			}
+			b64 := base64.StdEncoding.EncodeToString(b.Image)
+			userContent = append(userContent, visionContentItem{
+				Type:     "image_url",
+				ImageURL: &visionImageURL{URL: "data:" + mime + ";base64," + b64},
+			})
+		}
+	}
+	// 末尾追加阅卷指令
+	if tailPrompt != "" {
+		userContent = append(userContent, visionContentItem{
+			Type: "text",
+			Text: tailPrompt,
+		})
+	}
+
+	payload := visionChatRequest{
+		Model: model,
+		Messages: []visionMessage{
+			{
+				Role:    "system",
+				Content: []visionContentItem{{Type: "text", Text: systemPrompt}},
+			},
+			{
+				Role:    "user",
+				Content: userContent,
+			},
+		},
+	}
+	if forceJSON {
+		payload.ResponseFormat = &responseFormat{Type: "json_object"}
+	}
+	return c.doChat(payload)
 }
 
 // ChatWithImages 将多张 PNG 图片（文档页面）以 base64 格式发送给视觉模型进行阅卷。

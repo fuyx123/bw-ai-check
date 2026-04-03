@@ -97,3 +97,17 @@ func (h *UserHandler) ToggleStatus(c *gin.Context) {
 	}
 	response.OKWithData(c, user)
 }
+
+func (h *UserHandler) ResetPassword(c *gin.Context) {
+	var req dto.ResetPasswordReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, response.CodeParamError, err.Error())
+		return
+	}
+
+	if err := h.svc.ResetPassword(accessContext(c), c.Param("id"), req.NewPassword); err != nil {
+		response.Fail(c, response.CodeOperationFail, err.Error())
+		return
+	}
+	response.OK(c)
+}
