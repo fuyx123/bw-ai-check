@@ -6,7 +6,6 @@
 *.so.*
 *.dylib
 *.o
-server
 
 # Test binaries, built with `go test -c`
 *.test
