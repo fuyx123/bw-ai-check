@@ -80,7 +80,7 @@ func Init() error {
 	viper.SetDefault("STORAGE_USE_SSL", false)
 	viper.SetDefault("STORAGE_PUBLIC_URL", "")
 	viper.SetDefault("STORAGE_MAX_SIZE_MB", 50)
-	viper.SetDefault("CORS_ALLOW_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:3000")
+	viper.SetDefault("CORS_ALLOW_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost,capacitor://localhost,ionic://localhost")
 
 	// 读取环境变量
 	viper.AutomaticEnv()

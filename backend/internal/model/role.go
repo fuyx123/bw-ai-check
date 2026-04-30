@@ -10,7 +10,7 @@ type Role struct {
 	ID          string       `gorm:"column:id;primaryKey" json:"id"`
 	Name        string       `gorm:"column:name;uniqueIndex" json:"name"`
 	Description string       `gorm:"column:description" json:"description"`
-	DataScope   string       `gorm:"column:data_scope" json:"dataScope"` // school | college | major | class
+	DataScope   string       `gorm:"column:data_scope" json:"dataScope"` // school | college | major | class | personal
 	UserCount   int          `gorm:"column:user_count" json:"userCount"`
 	CreatedAt   time.Time    `gorm:"column:created_at" json:"createdAt"`
 	UpdatedAt   time.Time    `gorm:"column:updated_at" json:"updatedAt"`

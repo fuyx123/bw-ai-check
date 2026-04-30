@@ -7,13 +7,14 @@ import {
   logout as logoutRequest,
   type CurrentUser,
 } from '../services/auth';
-import { persistSession } from '../services/http';
+import { ApiError, clearPersistedSession, persistSession } from '../services/http';
 
 interface AuthState {
   currentUser: CurrentUser | null;
   permissions: string[];
   isAuthenticated: boolean;
   initializing: boolean;
+  hydrateSession: () => Promise<void>;
   login: (loginId: string, password: string, userType: UserType) => Promise<boolean>;
   loginAsRole: (roleId: string) => void;
   refreshCurrentUser: () => Promise<void>;
@@ -30,7 +31,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   currentUser: restored.user,
   permissions: restored.permissions,
   isAuthenticated: !!restored.user,
-  initializing: false,
+  initializing: !!restored.user,
+
+  hydrateSession: async () => {
+    if (!get().isAuthenticated) {
+      set({ initializing: false });
+      return;
+    }
+
+    try {
+      const { currentUser, permissions } = await fetchCurrentUser();
+      set({
+        currentUser,
+        permissions,
+        isAuthenticated: true,
+        initializing: false,
+      });
+      persistSession(currentUser, permissions);
+    } catch (error) {
+      const isAuthError =
+        error instanceof ApiError &&
+        (error.status === 401 || error.code === 2001 || error.code === 2002 || error.code === 2003);
+
+      if (!isAuthError) {
+        set({ initializing: false });
+        return;
+      }
+
+      clearPersistedSession();
+      set({
+        currentUser: null,
+        permissions: [],
+        isAuthenticated: false,
+        initializing: false,
+      });
+    }
+  },
 
   login: async (loginId, password, userType) => {
     const result = await loginRequest({ loginId, password, userType });
@@ -47,9 +83,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   refreshCurrentUser: async () => {
-    const currentUser = await fetchCurrentUser();
-    set({ currentUser, isAuthenticated: true });
-    persistSession(currentUser, get().permissions);
+    const { currentUser, permissions } = await fetchCurrentUser();
+    set({ currentUser, permissions, isAuthenticated: true });
+    persistSession(currentUser, permissions);
   },
 
   logout: async () => {

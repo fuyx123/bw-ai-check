@@ -1,4 +1,5 @@
 import { http } from './http';
+import type { TeachingCycle } from './cycle';
 
 export interface QuestionResult {
   no: number;
@@ -46,6 +47,7 @@ export interface AnswerFile {
   aiDetail: string; // JSON 字符串
   manualScore: number | null;
   manualComment: string;
+  manualDetail: string; // 逐题人工评分 JSON
   graderId: string;
   gradedAt: string | null;
   createdAt: string;
@@ -64,6 +66,80 @@ export interface ListResult {
   total: number;
   page: number;
   pageSize: number;
+}
+
+export interface ExamTrendPoint {
+  examDate: string;
+  sessionId: string;
+  sessionName: string;
+  score: number | null;
+  status: string;
+  belowTarget: boolean;
+}
+
+export interface ExamStudentTrend {
+  studentKey: string;
+  studentId: string;
+  studentName: string;
+  classId: string;
+  className: string;
+  averageScore: number;
+  latestScore: number | null;
+  lowScoreDays: number;
+  consecutiveLowDays: number;
+  flagged: boolean;
+  riskLevel: 'high' | 'medium' | 'low';
+  reasonSummary: string[];
+  points: ExamTrendPoint[];
+}
+
+export interface ExamRiskStudent {
+  studentKey: string;
+  studentId: string;
+  studentName: string;
+  classId: string;
+  className: string;
+  riskLevel: 'high' | 'medium' | 'low';
+  consecutiveLowDays: number;
+  latestScore: number | null;
+  averageScore: number;
+  reasonSummary: string[];
+}
+
+export interface ExamClassTrendDate {
+  examDate: string;
+  averageScore: number;
+  submittedCount: number;
+}
+
+export interface ExamClassTrendSummary {
+  classId: string;
+  className: string;
+  studentCount: number;
+  flaggedStudentCount: number;
+  averageScore: number;
+  dateAverages: ExamClassTrendDate[];
+}
+
+export interface ExamTrendReport {
+  cycleId: string;
+  cycleName: string;
+  threshold: number;
+  examDates: string[];
+  students: ExamStudentTrend[];
+  riskStudents: ExamRiskStudent[];
+  classSummaries: ExamClassTrendSummary[];
+}
+
+export async function fetchExamCycles(): Promise<TeachingCycle[]> {
+  const res = await http.get('/exam/cycles');
+  return res.data.data ?? [];
+}
+
+export async function fetchExamCycleDetail(id: string, classId?: string): Promise<TeachingCycle> {
+  const params = classId ? { classId } : {};
+  const res = await http.get(`/exam/cycles/${id}`, { params });
+  return res.data.data;
 }
 
 export interface UploadOptions {
@@ -142,9 +218,14 @@ export async function fetchGradingDetail(id: string): Promise<AnswerFile> {
   return res.data.data as AnswerFile;
 }
 
+export interface ManualQuestionScore {
+  no: number;
+  score: number;
+}
+
 export interface ManualReviewInput {
-  manualScore: number;
-  manualComment: string;
+  questionScores: ManualQuestionScore[];
+  comment: string;
 }
 
 /** 提交人工复阅结果 */
@@ -161,6 +242,14 @@ export interface ClassOption {
 export async function fetchAccessibleClasses(): Promise<ClassOption[]> {
   const res = await http.get('/exam/classes');
   return res.data.data ?? [];
+}
+
+export async function fetchExamTrendReport(params: {
+  cycleId?: string;
+  classId?: string;
+}): Promise<ExamTrendReport> {
+  const res = await http.get('/exam/trends', { params });
+  return res.data.data as ExamTrendReport;
 }
 
 /** 获取考次的阅卷老师列表 */

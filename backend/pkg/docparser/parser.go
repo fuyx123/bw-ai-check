@@ -198,7 +198,7 @@ func extractBlocks(docXML []byte, relMap map[string]string, mediaFiles map[strin
 				if !ok {
 					break
 				}
-				if isImageContent(imgData) {
+				if isImageContent(imgData, imgPath) {
 					paraImages = append(paraImages, imgData)
 				}
 
@@ -219,7 +219,7 @@ func extractBlocks(docXML []byte, relMap map[string]string, mediaFiles map[strin
 				if !ok {
 					break
 				}
-				if isImageContent(imgData) {
+				if isImageContent(imgData, imgPath) {
 					paraImages = append(paraImages, imgData)
 				}
 			}
@@ -256,9 +256,20 @@ func getAttr(attrs []xml.Attr, localName string) string {
 	return ""
 }
 
-func isImageContent(data []byte) bool {
+// isImageContent 检测字节是否为图片内容。
+// 先用 HTTP 内容嗅探，不足以识别时再按 imgPath 扩展名兜底（EMF/WMF/TIFF 等）。
+func isImageContent(data []byte, imgPath string) bool {
 	ct := http.DetectContentType(data)
-	return strings.HasPrefix(ct, "image/")
+	if strings.HasPrefix(ct, "image/") {
+		return true
+	}
+	// http.DetectContentType 无法识别 EMF/WMF/TIFF；通过扩展名兜底
+	ext := strings.ToLower(filepath.Ext(imgPath))
+	switch ext {
+	case ".emf", ".wmf", ".tif", ".tiff", ".svg":
+		return len(data) > 0
+	}
+	return false
 }
 
 // mergeBlocks 合并连续空文字块，将相邻文字块用换行合并

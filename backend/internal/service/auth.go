@@ -37,6 +37,12 @@ type LoginResp struct {
 	Permissions []string `json:"permissions"`
 }
 
+// CurrentSessionResp 当前登录态响应
+type CurrentSessionResp struct {
+	User        UserVO   `json:"user"`
+	Permissions []string `json:"permissions"`
+}
+
 // UserVO 用户视图对象（用于响应）
 type UserVO struct {
 	ID             string   `json:"id"`
@@ -87,8 +93,7 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 	}
 
 	// 4. 获取部门信息
-	dept := &model.Department{}
-	s.db.Where("id = ?", user.DepartmentID).First(dept)
+	dept := s.loadUserDepartment(user)
 
 	// 5. 确定 DataScope 和主角色ID
 	// 说明：claims 里仍保留单个 RoleID 字段（用于兼容现有结构），
@@ -96,7 +101,11 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 	var roleID string
 	var dataScope string
 	var roleIDs []string
-	if len(user.Roles) > 0 {
+	if user.UserType == "student" {
+		roleIDs = []string{"role-student"}
+		roleID = "role-student"
+		dataScope = "personal"
+	} else if len(user.Roles) > 0 {
 		roleIDs = make([]string, 0, len(user.Roles))
 		for _, r := range user.Roles {
 			roleIDs = append(roleIDs, r.ID)
@@ -105,9 +114,9 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 		roleID = user.Roles[0].ID
 		dataScope = maxDataScopeFromRoles(user.Roles)
 	} else {
-		// 学生默认为 class scope
+		// 学生默认为 personal scope
 		if req.UserType == "student" {
-			dataScope = "class"
+			dataScope = "personal"
 		} else {
 			dataScope = "school"
 		}
@@ -130,7 +139,7 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 		UserType:     user.UserType,
 		DataScope:    dataScope,
 		RoleID:       roleID,
-		DepartmentID: user.DepartmentID,
+		DepartmentID: resolveAccessDepartmentID(user),
 	}
 	token, err := jwtpkg.GenerateToken(claims)
 	if err != nil {
@@ -157,7 +166,7 @@ func (s *AuthService) Login(req dto.LoginReq) (*LoginResp, error) {
 }
 
 // GetMe 获取当前用户信息
-func (s *AuthService) GetMe(userID string) (*UserVO, error) {
+func (s *AuthService) GetMe(userID string) (*CurrentSessionResp, error) {
 	// 通过 repository 查询用户
 	user, err := s.userRepo.FindByID(userID)
 	if err != nil {
@@ -168,16 +177,28 @@ func (s *AuthService) GetMe(userID string) (*UserVO, error) {
 	}
 
 	// 获取部门信息
-	dept := &model.Department{}
-	s.db.Where("id = ?", user.DepartmentID).First(dept)
+	dept := s.loadUserDepartment(user)
 
 	// 确定 DataScope：取用户所有角色的数据范围中的“最宽松”范围。
 	// （roles[0] 仍被用于 RoleName 等展示字段，但数据范围以多角色聚合结果为准）
 	dataScope := "school"
+	roleIDs := make([]string, 0, len(user.Roles))
 	if len(user.Roles) > 0 {
+		for _, role := range user.Roles {
+			roleIDs = append(roleIDs, role.ID)
+		}
 		dataScope = maxDataScopeFromRoles(user.Roles)
 	} else if user.UserType == "student" {
-		dataScope = "class"
+		dataScope = "personal"
+		roleIDs = []string{"role-student"}
+	}
+	if user.UserType == "student" {
+		roleIDs = []string{"role-student"}
+	}
+
+	permissions, err := s.getUserPermissions(roleIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get permissions: %w", err)
 	}
 
 	userVO := s.modelToVO(user, dept)
@@ -186,7 +207,10 @@ func (s *AuthService) GetMe(userID string) (*UserVO, error) {
 	s.logger.Info("User info retrieved",
 		zap.String("userID", userID))
 
-	return &userVO, nil
+	return &CurrentSessionResp{
+		User:        userVO,
+		Permissions: permissions,
+	}, nil
 }
 
 // GetUserPermissions 获取用户权限列表
@@ -206,17 +230,18 @@ func (s *AuthService) getUserPermissions(roleIDs []string) ([]string, error) {
 }
 
 // maxDataScopeFromRoles 取多角色中的“最宽松”数据范围。
-// 范围层级（从宽到严）：school > college > major > class
+// 范围层级（从宽到严）：school > college > major > class > personal
 func maxDataScopeFromRoles(roles []model.Role) string {
 	priority := map[string]int{
-		"school":  4,
-		"college": 3,
-		"major":   2,
-		"class":   1,
+		"school":   4,
+		"college":  3,
+		"major":    2,
+		"class":    1,
+		"personal": 0,
 	}
 
-	maxScore := 0
-	result := "class"
+	maxScore := -1
+	result := "personal"
 	for _, r := range roles {
 		score, ok := priority[r.DataScope]
 		if !ok {
@@ -228,8 +253,8 @@ func maxDataScopeFromRoles(roles []model.Role) string {
 		}
 	}
 
-	if maxScore == 0 {
-		return "class"
+	if maxScore < 0 {
+		return "personal"
 	}
 	return result
 }
@@ -261,8 +286,34 @@ func (s *AuthService) modelToVO(user *model.User, dept *model.Department) UserVO
 		}
 		vo.RoleName = user.Roles[0].Name
 	}
+	if user.UserType == "student" {
+		vo.RoleIds = []string{"role-student"}
+		vo.RoleName = "学生"
+	}
 
 	return vo
+}
+
+func (s *AuthService) loadUserDepartment(user *model.User) *model.Department {
+	dept := &model.Department{}
+	if user == nil {
+		return dept
+	}
+
+	targetDepartmentID := resolveAccessDepartmentID(user)
+	s.db.Where("id = ?", targetDepartmentID).First(dept)
+	return dept
+}
+
+func resolveAccessDepartmentID(user *model.User) string {
+	if user == nil {
+		return ""
+	}
+
+	if user.UserType == "student" && user.ClassID != nil && strings.TrimSpace(*user.ClassID) != "" {
+		return strings.TrimSpace(*user.ClassID)
+	}
+	return user.DepartmentID
 }
 
 func resolveLoginIdentifier(user *model.User) string {

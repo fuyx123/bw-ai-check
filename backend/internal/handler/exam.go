@@ -16,13 +16,36 @@ import (
 
 // ExamHandler 阅卷管理 HTTP 处理器
 type ExamHandler struct {
-	svc        *service.ExamService
-	graderSvc  *service.ExamGraderService
+	svc       *service.ExamService
+	cycleSvc  *service.CycleService
+	graderSvc *service.ExamGraderService
 }
 
 // NewExamHandler 创建阅卷管理处理器
-func NewExamHandler(svc *service.ExamService, graderSvc *service.ExamGraderService) *ExamHandler {
-	return &ExamHandler{svc: svc, graderSvc: graderSvc}
+func NewExamHandler(svc *service.ExamService, cycleSvc *service.CycleService, graderSvc *service.ExamGraderService) *ExamHandler {
+	return &ExamHandler{svc: svc, cycleSvc: cycleSvc, graderSvc: graderSvc}
+}
+
+// ListCycles 返回阅卷页可用的教学周期列表。
+func (h *ExamHandler) ListCycles(c *gin.Context) {
+	cycles, err := h.cycleSvc.ListCycles()
+	if err != nil {
+		response.Fail(c, response.CodeOperationFail, err.Error())
+		return
+	}
+	response.OKWithData(c, cycles)
+}
+
+// GetCycle 返回阅卷页使用的教学周期详情与考次统计。
+func (h *ExamHandler) GetCycle(c *gin.Context) {
+	id := c.Param("id")
+	classID := c.Query("classId")
+	cycle, err := h.cycleSvc.GetCycleWithSessions(id, accessContext(c), classID)
+	if err != nil {
+		response.Fail(c, response.CodeOperationFail, err.Error())
+		return
+	}
+	response.OKWithData(c, cycle)
 }
 
 // Upload 单文件上传
@@ -129,6 +152,15 @@ func (h *ExamHandler) ListClasses(c *gin.Context) {
 	response.OKWithData(c, classes)
 }
 
+func (h *ExamHandler) GetTrendReport(c *gin.Context) {
+	item, err := h.svc.GetTrendReport(accessContext(c), c.Query("cycleId"), c.Query("classId"))
+	if err != nil {
+		response.Fail(c, response.CodeOperationFail, err.Error())
+		return
+	}
+	response.OKWithData(c, item)
+}
+
 // GetGradingDetail 获取单份试卷的阅卷明细（含 AI 结构化评分 + 人工复阅信息）
 func (h *ExamHandler) GetGradingDetail(c *gin.Context) {
 	id := c.Param("id")
@@ -144,18 +176,33 @@ func (h *ExamHandler) GetGradingDetail(c *gin.Context) {
 	response.OKWithData(c, file)
 }
 
-// SubmitManualReview 提交人工复阅结果
+// SubmitManualReview 提交人工复阅结果（逐题评分模式）
 func (h *ExamHandler) SubmitManualReview(c *gin.Context) {
 	id := c.Param("id")
 	var input struct {
-		ManualScore   int    `json:"manualScore" binding:"required"`
-		ManualComment string `json:"manualComment"`
+		QuestionScores []struct {
+			No    int `json:"no"`
+			Score int `json:"score"`
+		} `json:"questionScores" binding:"required"`
+		Comment string `json:"comment"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		response.Fail(c, response.CodeParamError, "参数错误: "+err.Error())
 		return
 	}
-	if err := h.svc.SubmitManualReview(accessContext(c), id, input.ManualComment, input.ManualScore); err != nil {
+	// 校验每题分数非负
+	for _, qs := range input.QuestionScores {
+		if qs.Score < 0 {
+			response.Fail(c, response.CodeParamError, "每题分数不能为负数")
+			return
+		}
+	}
+	// 转换为 service 层类型
+	scores := make([]service.ManualQuestionScore, len(input.QuestionScores))
+	for i, qs := range input.QuestionScores {
+		scores[i] = service.ManualQuestionScore{No: qs.No, Score: qs.Score}
+	}
+	if err := h.svc.SubmitManualReview(accessContext(c), id, input.Comment, scores); err != nil {
 		if err.Error() == "您不是该考次的指定阅卷老师，无权进行复阅" {
 			c.JSON(403, gin.H{"code": 403, "message": err.Error()})
 			return

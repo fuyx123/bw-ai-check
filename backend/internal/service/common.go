@@ -18,7 +18,7 @@ type AccessContext struct {
 	UserType     string // student | staff
 	RoleID       string
 	DepartmentID string
-	DataScope    string // school | college | major | class
+	DataScope    string // school | college | major | class | personal
 }
 
 func normalizePage(page, pageSize int) (int, int) {
@@ -194,9 +194,58 @@ func idsFromSet(set map[string]struct{}) []string {
 	return ids
 }
 
+func loadDepartments(db *gorm.DB) ([]model.Department, error) {
+	var depts []model.Department
+	if err := db.Find(&depts).Error; err != nil {
+		return nil, err
+	}
+	return depts, nil
+}
+
+func buildDepartmentNameByID(depts []model.Department) map[string]string {
+	result := make(map[string]string, len(depts))
+	for _, dept := range depts {
+		result[dept.ID] = dept.Name
+	}
+	return result
+}
+
+func buildDepartmentPathName(deptID string, depts []model.Department) string {
+	if strings.TrimSpace(deptID) == "" {
+		return ""
+	}
+	byID := make(map[string]model.Department, len(depts))
+	for _, dept := range depts {
+		byID[dept.ID] = dept
+	}
+	parts := make([]string, 0, 6)
+	currentID := deptID
+	for currentID != "" {
+		dept, ok := byID[currentID]
+		if !ok {
+			break
+		}
+		if dept.Level != "university" {
+			parts = append(parts, dept.Name)
+		}
+		if dept.ParentID == nil {
+			break
+		}
+		currentID = *dept.ParentID
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	slices.Reverse(parts)
+	return strings.Join(parts, "/")
+}
+
 func resolveAccessibleDepartmentIDs(db *gorm.DB, access AccessContext) (map[string]struct{}, error) {
 	if access.DepartmentID == "" || access.DataScope == "" || access.DataScope == "school" {
 		return nil, nil
+	}
+	if access.DataScope == "personal" {
+		return map[string]struct{}{}, nil
 	}
 
 	var depts []model.Department
@@ -229,10 +278,13 @@ func applyUserRuntimeField(user *model.User) {
 		roleIDs = append(roleIDs, role.ID)
 	}
 	user.RoleIds = roleIDs
+	if user.UserType == "student" {
+		user.RoleIds = []string{"role-student"}
+		user.RoleName = "学生"
+		return
+	}
 	if len(user.Roles) > 0 {
 		user.RoleName = user.Roles[0].Name
-	} else if user.UserType == "student" {
-		user.RoleName = "学生"
 	}
 }
 

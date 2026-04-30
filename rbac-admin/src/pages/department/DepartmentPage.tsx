@@ -13,7 +13,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Select,
   Popconfirm,
   Dropdown,
 } from 'antd';
@@ -36,7 +35,6 @@ import {
 import type { DataNode } from 'antd/es/tree';
 import * as XLSX from 'xlsx';
 import { useDepartmentStore } from '../../stores/departmentStore';
-import { usePositionStore } from '../../stores/positionStore';
 import StatCard from '../../components/common/StatCard';
 import type { Department } from '../../types/rbac';
 
@@ -55,9 +53,6 @@ const DepartmentPage: React.FC = () => {
     deleteDepartment,
   } = useDepartmentStore();
 
-  const { positions, fetchPositions } = usePositionStore();
-  const positionOptions = positions.map((p) => ({ value: p.name, label: `${p.name}（${p.code}）` }));
-
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([
     'dept-root',
     'dept-fs',
@@ -74,8 +69,7 @@ const DepartmentPage: React.FC = () => {
 
   useEffect(() => {
     fetchDepartments();
-    fetchPositions();
-  }, [fetchDepartments, fetchPositions]);
+  }, [fetchDepartments]);
 
   useEffect(() => {
     if (!selectedDepartment && flatDepartments.length > 0) {
@@ -545,6 +539,7 @@ const DepartmentPage: React.FC = () => {
               rowKey="id"
               pagination={false}
               size="middle"
+              scroll={{ x: 'max-content' }}
             />
             {currentDepts.length > 0 && (
               <div className="pagination-wrapper" style={{ padding: '12px 20px' }}>
@@ -643,15 +638,10 @@ const DepartmentPage: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="leaderTitle"
-                label="负责人职称"
-                rules={[{ required: true, message: '请选择职称' }]}
+                label="负责人职务"
+                rules={[{ required: true, message: '请输入负责人职务' }]}
               >
-                <Select
-                  placeholder="选择职称"
-                  showSearch
-                  optionFilterProp="label"
-                  options={positionOptions}
-                />
+                <Input placeholder="如：院长、专业主任、班主任" />
               </Form.Item>
             </Col>
           </Row>

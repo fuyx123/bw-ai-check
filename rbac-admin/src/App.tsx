@@ -17,20 +17,36 @@ import DashboardPage from './pages/dashboard/DashboardPage';
 import DepartmentPage from './pages/department/DepartmentPage';
 import RolePage from './pages/role/RolePage';
 import UserPage from './pages/user/UserPage';
-import PositionPage from './pages/position/PositionPage';
-import GradePage from './pages/grade/GradePage';
 import MenuPage from './pages/menu/MenuPage';
 import ExamPage from './pages/exam/ExamPage';
 import GradingDetailPage from './pages/exam/GradingDetailPage';
+import HomeworkPage from './pages/homework/HomeworkPage';
+import HomeworkDetailPage from './pages/homework/HomeworkDetailPage';
 import CyclePage from './pages/cycle/CyclePage';
 import ModelPage from './pages/model/ModelPage';
+import AuditLogPage from './pages/audit/AuditLogPage';
 import { useAuthStore } from './stores/authStore';
 import AccessDeniedPage from './pages/access/AccessDeniedPage';
+
+const AuthBootstrap: React.FC = () => {
+  const hydrateSession = useAuthStore((state) => state.hydrateSession);
+
+  useEffect(() => {
+    void hydrateSession();
+  }, [hydrateSession]);
+
+  return null;
+};
 
 // 路由守卫：未登录重定向到 /login
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const initializing = useAuthStore((s) => s.initializing);
   const location = useLocation();
+
+  if (initializing) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -45,10 +61,16 @@ const RequirePermission: React.FC<{
   children: React.ReactNode;
 }> = ({ pageName, permissionCodes, children }) => {
   const permissions = useAuthStore((state) => state.permissions);
+  const initializing = useAuthStore((state) => state.initializing);
+  const location = useLocation();
+
+  if (initializing) {
+    return null;
+  }
   const hasAccess = permissionCodes.some((code) => permissions.includes(code));
 
   if (!hasAccess) {
-    return <AccessDeniedPage pageName={pageName} />;
+    return <Navigate to="/access-denied" replace state={{ pageName, from: location.pathname }} />;
   }
 
   return <>{children}</>;
@@ -58,6 +80,7 @@ const App: React.FC = () => {
   return (
     <AntdApp>
     <BrowserRouter>
+      <AuthBootstrap />
       <Routes>
         <Route path="/login" element={<MessageProvider><LoginPage /></MessageProvider>} />
         <Route
@@ -72,6 +95,7 @@ const App: React.FC = () => {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="access-denied" element={<AccessDeniedPage />} />
           <Route
             path="departments"
             element={
@@ -97,26 +121,18 @@ const App: React.FC = () => {
             }
           />
           <Route
-            path="positions"
-            element={
-              <RequirePermission pageName="职位管理" permissionCodes={['menu-position', 'menu-positions']}>
-                <PositionPage />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="grades"
-            element={
-              <RequirePermission pageName="职级管理" permissionCodes={['menu-grade', 'menu-grades']}>
-                <GradePage />
-              </RequirePermission>
-            }
-          />
-          <Route
             path="menus"
             element={
               <RequirePermission pageName="菜单管理" permissionCodes={['menu-menu', 'menu-menus']}>
                 <MenuPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="audit-logs"
+            element={
+              <RequirePermission pageName="审计日志" permissionCodes={['menu-audit']}>
+                <AuditLogPage />
               </RequirePermission>
             }
           />
@@ -133,6 +149,22 @@ const App: React.FC = () => {
             element={
               <RequirePermission pageName="阅卷明细" permissionCodes={['menu-exam']}>
                 <GradingDetailPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="homework"
+            element={
+              <RequirePermission pageName="作业审批" permissionCodes={['menu-homework-approval']}>
+                <HomeworkPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="homework/submissions/:id"
+            element={
+              <RequirePermission pageName="作业审批明细" permissionCodes={['menu-homework-approval']}>
+                <HomeworkDetailPage />
               </RequirePermission>
             }
           />

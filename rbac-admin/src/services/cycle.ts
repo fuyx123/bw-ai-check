@@ -21,6 +21,23 @@ export interface TeachingCycle {
   sessions?: ExamSession[];
 }
 
+export interface ExamGrader {
+  id: string;
+  examSessionId: string;
+  classId: string;
+  className: string;
+  graderId: string;
+  graderName: string;
+  createdAt: string;
+}
+
+export interface CycleStaffOption {
+  id: string;
+  name: string;
+  loginId: string;
+  email: string;
+}
+
 /** 获取所有教学周期列表 */
 export async function fetchCycles(): Promise<TeachingCycle[]> {
   const res = await http.get('/cycles');
@@ -58,4 +75,26 @@ export async function importSchedule(
   formData.append('file', file);
   const res = await http.post(`/cycles/${cycleId}/import`, formData);
   return res.data.data;
+}
+
+export async function fetchCycleStaff(): Promise<CycleStaffOption[]> {
+  const res = await http.get('/cycles/staff');
+  return res.data.data ?? [];
+}
+
+export async function fetchCycleSessionGraders(sessionId: string): Promise<ExamGrader[]> {
+  const res = await http.get(`/cycles/sessions/${sessionId}/graders`);
+  return res.data.data ?? [];
+}
+
+export async function upsertCycleSessionGrader(
+  sessionId: string,
+  payload: Pick<ExamGrader, 'classId' | 'className' | 'graderId' | 'graderName'>,
+): Promise<ExamGrader> {
+  const res = await http.post(`/cycles/sessions/${sessionId}/graders`, payload);
+  return res.data.data;
+}
+
+export async function deleteCycleSessionGrader(id: string): Promise<void> {
+  await http.delete(`/cycles/sessions/graders/${id}`);
 }

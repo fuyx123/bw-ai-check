@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	"bw-ai-check/backend/internal/dto"
 	"bw-ai-check/backend/internal/middleware"
 	"bw-ai-check/backend/internal/service"
 	"bw-ai-check/backend/pkg/response"
+	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
@@ -49,11 +49,11 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
-	user, err := h.svc.GetMe(userID)
+	session, err := h.svc.GetMe(userID)
 	if err != nil {
 		response.Fail(c, response.CodeOperationFail, err.Error())
 		return
 	}
 
-	response.OKWithData(c, user)
+	response.OKWithData(c, session)
 }

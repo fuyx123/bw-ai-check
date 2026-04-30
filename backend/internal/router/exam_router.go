@@ -10,13 +10,18 @@ import (
 
 // RegisterExamRoutes 注册阅卷管理路由
 func RegisterExamRoutes(v1 *gin.RouterGroup, c *app.Container) {
-	h := handler.NewExamHandler(c.ExamSvc, c.ExamGraderSvc)
+	h := handler.NewExamHandler(c.ExamSvc, c.CycleSvc, c.ExamGraderSvc)
 
 	exam := v1.Group("/exam")
 	exam.Use(middleware.JWTMiddleware())
 	{
+		// 阅卷页专用的周期只读接口，避免依赖教学周期管理权限
+		exam.GET("/cycles", middleware.PermissionMiddleware("menu-exam"), h.ListCycles)
+		exam.GET("/cycles/:id", middleware.PermissionMiddleware("menu-exam"), h.GetCycle)
+
 		// 获取当前用户可访问的班级列表（用于筛选器）
 		exam.GET("/classes", middleware.PermissionMiddleware("menu-exam"), h.ListClasses)
+		exam.GET("/trends", middleware.PermissionMiddleware("menu-exam"), h.GetTrendReport)
 
 		papers := exam.Group("/papers")
 		{

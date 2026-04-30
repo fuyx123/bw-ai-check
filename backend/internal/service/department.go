@@ -28,6 +28,10 @@ func NewDepartmentService(db *gorm.DB, deptRepo *repository.DepartmentRepository
 }
 
 func (s *DepartmentService) GetTree(access AccessContext) ([]model.Department, error) {
+	if access.DataScope == "personal" {
+		return []model.Department{}, nil
+	}
+
 	depts, err := s.deptRepo.FindAll()
 	if err != nil {
 		return nil, err
@@ -51,6 +55,10 @@ func (s *DepartmentService) GetTree(access AccessContext) ([]model.Department, e
 }
 
 func (s *DepartmentService) List(access AccessContext, page, pageSize int, level, keyword string) ([]model.Department, int64, error) {
+	if access.DataScope == "personal" {
+		return []model.Department{}, 0, nil
+	}
+
 	page, pageSize = normalizePage(page, pageSize)
 
 	depts, err := s.deptRepo.FindAll()
@@ -99,6 +107,10 @@ func (s *DepartmentService) List(access AccessContext, page, pageSize int, level
 }
 
 func (s *DepartmentService) GetDetail(access AccessContext, id string) (*model.Department, error) {
+	if access.DataScope == "personal" {
+		return nil, fmt.Errorf("department is outside current data scope")
+	}
+
 	dept, err := s.deptRepo.FindByID(id)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,6 @@
 // RBAC 核心类型定义
 
-export type DataScope = 'school' | 'college' | 'major' | 'class';
+export type DataScope = 'school' | 'college' | 'major' | 'class' | 'personal';
 export type DepartmentStatus = 'operational';
 export type AccessStatus = 'full' | 'partial' | 'inactive';
 export type DepartmentLevel = 'university' | 'college' | 'stage' | 'major' | 'class';
@@ -81,29 +81,7 @@ export interface AuditLog {
   action: string;
   operator: string;
   target: string;
-  timestamp: string;
-  type: 'info' | 'warning' | 'success';
-}
-
-export type PositionCategoryCode = string;
-
-export interface PositionCategory {
-  id: string;
-  code: string;
-  name: string;
-  color: string;
-  icon: string;
-  sortOrder: number;
-  description: string;
-}
-
-export interface Position {
-  id: string;
-  name: string;
-  code: string;
-  category: PositionCategoryCode;
-  level: number;
-  description: string;
-  headcount: number;
+  detail?: string;
   createdAt: string;
+  type: 'info' | 'warning' | 'success';
 }

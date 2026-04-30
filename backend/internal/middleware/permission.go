@@ -1,26 +1,21 @@
 package middleware
 
 import (
-	"github.com/gin-gonic/gin"
 	"bw-ai-check/backend/pkg/database"
 	"bw-ai-check/backend/pkg/response"
+	"github.com/gin-gonic/gin"
 )
 
 var permissionAliases = map[string][]string{
-	"menu-users":     {"menu-users", "menu-user"},
-	"menu-roles":     {"menu-roles", "menu-role"},
-	"menu-menus":     {"menu-menus", "menu-menu"},
-	"menu-positions": {"menu-positions", "menu-position"},
-	"menu-grades":    {"menu-grades", "menu-grade"},
+	"menu-users":  {"menu-users", "menu-user"},
+	"menu-roles":  {"menu-roles", "menu-role"},
+	"menu-menus":  {"menu-menus", "menu-menu"},
+	"menu-grades": {"menu-grades", "menu-grade"},
 
 	// 动作级权限回退到基础权限：确保动作路由在数据库未配齐 add/edit/delete 时仍可工作。
-	"menu-menu-add":     {"menu-menu-add", "menu-menu"},
-	"menu-menu-edit":    {"menu-menu-edit", "menu-menu"},
-	"menu-menu-delete":  {"menu-menu-delete", "menu-menu"},
-
-	"menu-pos-add":     {"menu-pos-add", "menu-position"},
-	"menu-pos-edit":    {"menu-pos-edit", "menu-position"},
-	"menu-pos-delete":  {"menu-pos-delete", "menu-position"},
+	"menu-menu-add":    {"menu-menu-add", "menu-menu"},
+	"menu-menu-edit":   {"menu-menu-edit", "menu-menu"},
+	"menu-menu-delete": {"menu-menu-delete", "menu-menu"},
 
 	"menu-user-add":    {"menu-user-add", "menu-user"},
 	"menu-user-edit":   {"menu-user-edit", "menu-user"},

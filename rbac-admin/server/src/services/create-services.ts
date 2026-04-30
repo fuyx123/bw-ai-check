@@ -6,7 +6,6 @@ import { AuthService } from './auth-service';
 import { DepartmentService } from './department-service';
 import { GradeService } from './grade-service';
 import { MenuService } from './menu-service';
-import { PositionService } from './position-service';
 import { RoleService } from './role-service';
 import { UserService } from './user-service';
 
@@ -23,7 +22,6 @@ export function createServices(store: AppStore, config: AppConfig) {
     userService: new UserService(store, accessService, auditService, authService),
     roleService: new RoleService(store, accessService, auditService),
     menuService: new MenuService(store, accessService, auditService),
-    positionService: new PositionService(store, auditService),
     gradeService: new GradeService(store, auditService),
   };
 }

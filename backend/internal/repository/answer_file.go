@@ -142,13 +142,15 @@ func (r *AnswerFileRepository) SaveAIGradingFailure(id, comment string) error {
 }
 
 // SaveManualReview 保存人工复阅结果，状态更新为 reviewed
-func (r *AnswerFileRepository) SaveManualReview(id, graderID, comment string, score int) error {
+// detail 为逐题评分 JSON 字符串（格式：[{"no":1,"score":5},...]）
+func (r *AnswerFileRepository) SaveManualReview(id, graderID, comment string, score int, detail string) error {
 	now := time.Now()
 	return r.db.Model(&model.AnswerFile{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"manual_score":   score,
 			"manual_comment": comment,
+			"manual_detail":  detail,
 			"grader_id":      graderID,
 			"graded_at":      now,
 			"status":         "reviewed",

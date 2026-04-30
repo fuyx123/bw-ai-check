@@ -12,9 +12,12 @@ const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({ pageName }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useAuthStore((state) => state.currentUser);
+  const state = location.state as { pageName?: string; from?: string; message?: string } | null;
+  const query = new URLSearchParams(location.search);
 
   const roleName = currentUser?.role || '当前账号';
-  const requestedPage = pageName || location.pathname;
+  const requestedPage = pageName || state?.pageName || query.get('pageName') || state?.from || query.get('from') || location.pathname;
+  const reasonText = state?.message || query.get('message') || '你当前账号暂未开通该页面访问权限。';
 
   const handleGoBack = () => {
     if (window.history.length > 1) {
@@ -125,7 +128,7 @@ const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({ pageName }) => {
                 <span style={{ color: '#1a2332', fontWeight: 600 }}> {roleName} </span>
                 身份登录，暂未开通
                 <span style={{ color: '#1a2332', fontWeight: 600 }}>「{requestedPage}」</span>
-                的访问权限。你仍然可以继续使用左侧已开放的功能，如确有业务需要，可联系管理员协助开通。
+                的访问权限。{reasonText} 你仍然可以继续使用左侧已开放的功能，如确有业务需要，可联系管理员协助开通。
               </p>
             </div>
           </div>

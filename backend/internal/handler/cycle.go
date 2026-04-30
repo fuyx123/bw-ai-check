@@ -3,17 +3,20 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 
+	"bw-ai-check/backend/internal/dto"
 	"bw-ai-check/backend/internal/service"
 	"bw-ai-check/backend/pkg/response"
 )
 
 // CycleHandler 教学周期 HTTP 处理器
 type CycleHandler struct {
-	svc *service.CycleService
+	svc       *service.CycleService
+	userSvc   *service.UserService
+	graderSvc *service.ExamGraderService
 }
 
-func NewCycleHandler(svc *service.CycleService) *CycleHandler {
-	return &CycleHandler{svc: svc}
+func NewCycleHandler(svc *service.CycleService, userSvc *service.UserService, graderSvc *service.ExamGraderService) *CycleHandler {
+	return &CycleHandler{svc: svc, userSvc: userSvc, graderSvc: graderSvc}
 }
 
 // ListCycles GET /api/v1/cycles
@@ -24,6 +27,26 @@ func (h *CycleHandler) ListCycles(c *gin.Context) {
 		return
 	}
 	response.OKWithData(c, cycles)
+}
+
+// ListStaff GET /api/v1/cycles/staff
+func (h *CycleHandler) ListStaff(c *gin.Context) {
+	users, _, _, err := h.userSvc.List(accessContext(c), dto.UserFilter{UserType: "staff"}, 1, 200)
+	if err != nil {
+		response.Fail(c, response.CodeOperationFail, err.Error())
+		return
+	}
+
+	items := make([]gin.H, 0, len(users))
+	for _, user := range users {
+		items = append(items, gin.H{
+			"id":      user.ID,
+			"name":    user.Name,
+			"loginId": user.LoginID,
+			"email":   user.Email,
+		})
+	}
+	response.OKWithData(c, items)
 }
 
 // CreateCycle POST /api/v1/cycles
@@ -56,6 +79,43 @@ func (h *CycleHandler) GetCycle(c *gin.Context) {
 		return
 	}
 	response.OKWithData(c, cycle)
+}
+
+// ListSessionGraders GET /api/v1/cycles/sessions/:sessionId/graders
+func (h *CycleHandler) ListSessionGraders(c *gin.Context) {
+	sessionID := c.Param("sessionId")
+	graders, err := h.graderSvc.ListBySession(sessionID)
+	if err != nil {
+		response.Fail(c, response.CodeOperationFail, err.Error())
+		return
+	}
+	response.OKWithData(c, graders)
+}
+
+// UpsertSessionGrader POST /api/v1/cycles/sessions/:sessionId/graders
+func (h *CycleHandler) UpsertSessionGrader(c *gin.Context) {
+	sessionID := c.Param("sessionId")
+	var input service.UpsertInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		response.Fail(c, response.CodeParamError, "参数错误: "+err.Error())
+		return
+	}
+	grader, err := h.graderSvc.Upsert(sessionID, input)
+	if err != nil {
+		response.Fail(c, response.CodeOperationFail, err.Error())
+		return
+	}
+	response.OKWithData(c, grader)
+}
+
+// DeleteSessionGrader DELETE /api/v1/cycles/sessions/graders/:id
+func (h *CycleHandler) DeleteSessionGrader(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.graderSvc.Delete(id); err != nil {
+		response.Fail(c, response.CodeOperationFail, err.Error())
+		return
+	}
+	response.OK(c)
 }
 
 // DeleteCycle DELETE /api/v1/cycles/:id

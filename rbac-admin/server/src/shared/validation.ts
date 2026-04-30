@@ -113,7 +113,7 @@ export function getDataScope(
   field = 'dataScope',
   required = false,
 ): DataScope | undefined {
-  return getEnumValue(input, field, ['school', 'college', 'major', 'class'], { required });
+  return getEnumValue(input, field, ['school', 'college', 'major', 'class', 'personal'], { required });
 }
 
 export function getDepartmentLevel(

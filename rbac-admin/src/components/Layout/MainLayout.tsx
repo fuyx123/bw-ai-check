@@ -10,8 +10,17 @@ const { Sider, Content } = Layout;
 
 const MainLayout: React.FC = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const refreshCurrentUser = useAuthStore((state) => state.refreshCurrentUser);
   const fetchNavigationMenus = useMenuStore((state) => state.fetchNavigationMenus);
   const clearMenus = useMenuStore((state) => state.clearMenus);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    void refreshCurrentUser().catch(() => undefined);
+  }, [isAuthenticated, refreshCurrentUser]);
 
   useEffect(() => {
     clearMenus();

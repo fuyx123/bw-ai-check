@@ -27,6 +27,11 @@ interface LoginResponse {
   permissions: string[];
 }
 
+interface CurrentSessionResponse {
+  user: BackendAuthUser;
+  permissions: string[];
+}
+
 export interface CurrentUser {
   id: string;
   name: string;
@@ -42,8 +47,20 @@ export interface CurrentUser {
   className?: string;
 }
 
-function mapCurrentUser(user: BackendAuthUser): CurrentUser {
+function normalizeCurrentUser(user: CurrentUser): CurrentUser {
+  if (user.userType !== 'student') {
+    return user;
+  }
+
   return {
+    ...user,
+    role: '学生',
+    roleId: 'role-student',
+  };
+}
+
+function mapCurrentUser(user: BackendAuthUser): CurrentUser {
+  return normalizeCurrentUser({
     id: user.id,
     name: user.name,
     role: user.roleName,
@@ -56,7 +73,7 @@ function mapCurrentUser(user: BackendAuthUser): CurrentUser {
     loginId: user.loginId,
     classId: user.classId ?? undefined,
     className: user.className ?? undefined,
-  };
+  });
 }
 
 export async function login(payload: LoginRequest) {
@@ -76,8 +93,11 @@ export async function login(payload: LoginRequest) {
 
 export async function fetchCurrentUser() {
   const response = await http.get('/auth/me');
-  const data = unwrap<BackendAuthUser>(response.data);
-  return mapCurrentUser(data);
+  const data = unwrap<CurrentSessionResponse>(response.data);
+  return {
+    currentUser: mapCurrentUser(data.user),
+    permissions: data.permissions,
+  };
 }
 
 export async function logout() {
@@ -89,5 +109,9 @@ export async function logout() {
 }
 
 export function getRestoredAuthState() {
-  return restoreSession<CurrentUser>();
+  const restored = restoreSession<CurrentUser>();
+  return {
+    ...restored,
+    user: restored.user ? normalizeCurrentUser(restored.user) : null,
+  };
 }

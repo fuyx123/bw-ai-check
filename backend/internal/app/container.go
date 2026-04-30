@@ -22,18 +22,19 @@ type Container struct {
 	Uploader *uploader.Uploader
 
 	// Repositories
-	UserRepo        *repository.UserRepository
-	DeptRepo        *repository.DepartmentRepository
-	RoleRepo        *repository.RoleRepository
-	MenuRepo        *repository.MenuRepository
-	PosRepo         *repository.PositionRepository
-	GradeRepo       *repository.GradeRepository
-	AuditLogRepo    *repository.AuditLogRepository
-	AnswerFileRepo  *repository.AnswerFileRepository
-	CycleRepo       *repository.TeachingCycleRepository
-	SessionRepo     *repository.ExamSessionRepository
-	AIModelRepo     *repository.AIModelRepository
-	ExamGraderRepo  *repository.ExamGraderRepository
+	UserRepo               *repository.UserRepository
+	DeptRepo               *repository.DepartmentRepository
+	RoleRepo               *repository.RoleRepository
+	MenuRepo               *repository.MenuRepository
+	GradeRepo              *repository.GradeRepository
+	AuditLogRepo           *repository.AuditLogRepository
+	AnswerFileRepo         *repository.AnswerFileRepository
+	CycleRepo              *repository.TeachingCycleRepository
+	SessionRepo            *repository.ExamSessionRepository
+	AIModelRepo            *repository.AIModelRepository
+	ExamGraderRepo         *repository.ExamGraderRepository
+	HomeworkTaskRepo       *repository.HomeworkTaskRepository
+	HomeworkSubmissionRepo *repository.HomeworkSubmissionRepository
 
 	// Services
 	AuthSvc       *service.AuthService
@@ -41,13 +42,13 @@ type Container struct {
 	DeptSvc       *service.DepartmentService
 	RoleSvc       *service.RoleService
 	MenuSvc       *service.MenuService
-	PosSvc        *service.PositionService
 	GradeSvc      *service.GradeService
 	AuditSvc      *service.AuditLogService
 	ExamSvc       *service.ExamService
 	CycleSvc      *service.CycleService
 	ModelSvc      *service.AIModelService
 	ExamGraderSvc *service.ExamGraderService
+	HomeworkSvc   *service.HomeworkService
 }
 
 // NewContainer 创建并初始化依赖容器
@@ -83,7 +84,6 @@ func NewContainer(cfg *config.Config, logger *zap.Logger, db *gorm.DB) (*Contain
 	container.DeptRepo = repository.NewDepartmentRepository(db, logger)
 	container.RoleRepo = repository.NewRoleRepository(db, logger)
 	container.MenuRepo = repository.NewMenuRepository(db, logger)
-	container.PosRepo = repository.NewPositionRepository(db, logger)
 	container.GradeRepo = repository.NewGradeRepository(db, logger)
 	container.AuditLogRepo = repository.NewAuditLogRepository(db, logger)
 	container.AnswerFileRepo = repository.NewAnswerFileRepository(db, logger)
@@ -91,6 +91,8 @@ func NewContainer(cfg *config.Config, logger *zap.Logger, db *gorm.DB) (*Contain
 	container.SessionRepo = repository.NewExamSessionRepository(db)
 	container.AIModelRepo = repository.NewAIModelRepository(db)
 	container.ExamGraderRepo = repository.NewExamGraderRepository(db)
+	container.HomeworkTaskRepo = repository.NewHomeworkTaskRepository(db, logger)
+	container.HomeworkSubmissionRepo = repository.NewHomeworkSubmissionRepository(db, logger)
 
 	// 初始化服务
 	container.AuthSvc = service.NewAuthService(db, container.UserRepo, logger)
@@ -98,13 +100,20 @@ func NewContainer(cfg *config.Config, logger *zap.Logger, db *gorm.DB) (*Contain
 	container.DeptSvc = service.NewDepartmentService(db, container.DeptRepo, logger)
 	container.RoleSvc = service.NewRoleService(db, container.RoleRepo, logger)
 	container.MenuSvc = service.NewMenuService(db, container.MenuRepo, logger)
-	container.PosSvc = service.NewPositionService(db, container.PosRepo, logger)
 	container.GradeSvc = service.NewGradeService(db, container.GradeRepo, logger)
 	container.AuditSvc = service.NewAuditLogService(db, container.AuditLogRepo, logger)
 	container.ExamGraderSvc = service.NewExamGraderService(container.ExamGraderRepo, container.SessionRepo)
 	container.ExamSvc = service.NewExamService(db, container.AnswerFileRepo, container.ExamGraderRepo, uploaderImpl, container.AIModelRepo, logger)
 	container.CycleSvc = service.NewCycleService(db, container.CycleRepo, container.SessionRepo, logger)
 	container.ModelSvc = service.NewAIModelService(container.AIModelRepo, logger)
+	container.HomeworkSvc = service.NewHomeworkService(
+		db,
+		container.HomeworkTaskRepo,
+		container.HomeworkSubmissionRepo,
+		container.AIModelRepo,
+		uploaderImpl,
+		logger,
+	)
 
 	logger.Info("Container initialized",
 		zap.String("storage.endpoint", storageCfg.Endpoint),

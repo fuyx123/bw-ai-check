@@ -332,6 +332,7 @@ const MenuPage: React.FC = () => {
           rowKey="id"
           pagination={false}
           size="middle"
+          scroll={{ x: 'max-content' }}
           expandable={{ defaultExpandAllRows: true, childrenColumnName: 'children' }}
         />
       </div>

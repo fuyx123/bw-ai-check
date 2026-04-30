@@ -3,12 +3,16 @@ import type { MenuItem } from '../../types/rbac';
 export const menus: MenuItem[] = [
   // Root menus matching Sidebar
   { id: 'menu-dashboard', name: '工作台', path: '/dashboard', icon: 'DashboardOutlined', parentId: null, sortOrder: 1, visible: true, type: 'menu' },
-  { id: 'menu-dept', name: '部门管理', path: '/departments', icon: 'ApartmentOutlined', parentId: null, sortOrder: 2, visible: true, type: 'menu' },
-  { id: 'menu-role', name: '角色管理', path: '/roles', icon: 'TeamOutlined', parentId: null, sortOrder: 3, visible: true, type: 'menu' },
-  { id: 'menu-user', name: '用户管理', path: '/users', icon: 'UserOutlined', parentId: null, sortOrder: 4, visible: true, type: 'menu' },
-  { id: 'menu-position', name: '职位管理', path: '/positions', icon: 'SolutionOutlined', parentId: null, sortOrder: 5, visible: true, type: 'menu' },
-  { id: 'menu-grade', name: '成绩管理', path: '/grades', icon: 'BarChartOutlined', parentId: null, sortOrder: 6, visible: true, type: 'menu' },
-  { id: 'menu-menu', name: '菜单管理', path: '/menus', icon: 'MenuOutlined', parentId: null, sortOrder: 7, visible: true, type: 'menu' },
+  { id: 'menu-access', name: '权限管理', path: '', icon: 'SafetyOutlined', parentId: null, sortOrder: 2, visible: true, type: 'menu' },
+  { id: 'menu-audit', name: '审计日志', path: '/audit-logs', icon: 'AuditOutlined', parentId: null, sortOrder: 5, visible: true, type: 'menu' },
+  { id: 'menu-exam', name: '阅卷管理', path: '/exam', icon: 'AuditOutlined', parentId: null, sortOrder: 6, visible: true, type: 'menu' },
+  { id: 'menu-homework-approval', name: '作业审批', path: '/homework', icon: 'BookOutlined', parentId: null, sortOrder: 7, visible: true, type: 'menu' },
+  { id: 'menu-cycle', name: '教学周期管理', path: '/cycles', icon: 'CalendarOutlined', parentId: null, sortOrder: 8, visible: true, type: 'menu' },
+  { id: 'menu-model', name: '模型管理', path: '/models', icon: 'ApiOutlined', parentId: null, sortOrder: 9, visible: true, type: 'menu' },
+  { id: 'menu-dept', name: '部门管理', path: '/departments', icon: 'ApartmentOutlined', parentId: 'menu-access', sortOrder: 1, visible: true, type: 'menu' },
+  { id: 'menu-role', name: '角色管理', path: '/roles', icon: 'TeamOutlined', parentId: 'menu-access', sortOrder: 2, visible: true, type: 'menu' },
+  { id: 'menu-user', name: '用户管理', path: '/users', icon: 'UserOutlined', parentId: 'menu-access', sortOrder: 3, visible: true, type: 'menu' },
+  { id: 'menu-menu', name: '菜单管理', path: '/menus', icon: 'MenuOutlined', parentId: 'menu-access', sortOrder: 4, visible: true, type: 'menu' },
 
   // Button permissions for 部门管理
   { id: 'menu-dept-add', name: '新增部门', path: '', icon: '', parentId: 'menu-dept', sortOrder: 1, visible: true, type: 'button' },
@@ -27,15 +31,16 @@ export const menus: MenuItem[] = [
   { id: 'menu-user-edit', name: '编辑用户', path: '', icon: '', parentId: 'menu-user', sortOrder: 2, visible: true, type: 'button' },
   { id: 'menu-user-delete', name: '删除用户', path: '', icon: '', parentId: 'menu-user', sortOrder: 3, visible: true, type: 'button' },
 
-  // Button permissions for 职位管理
-  { id: 'menu-pos-add', name: '新增职位', path: '', icon: '', parentId: 'menu-position', sortOrder: 1, visible: true, type: 'button' },
-  { id: 'menu-pos-edit', name: '编辑职位', path: '', icon: '', parentId: 'menu-position', sortOrder: 2, visible: true, type: 'button' },
-  { id: 'menu-pos-delete', name: '删除职位', path: '', icon: '', parentId: 'menu-position', sortOrder: 3, visible: true, type: 'button' },
-
   // Button permissions for 菜单管理
   { id: 'menu-menu-add', name: '新增菜单', path: '', icon: '', parentId: 'menu-menu', sortOrder: 1, visible: true, type: 'button' },
   { id: 'menu-menu-edit', name: '编辑菜单', path: '', icon: '', parentId: 'menu-menu', sortOrder: 2, visible: true, type: 'button' },
   { id: 'menu-menu-delete', name: '删除菜单', path: '', icon: '', parentId: 'menu-menu', sortOrder: 3, visible: true, type: 'button' },
+
+  // Button permissions for 阅卷与教学周期
+  { id: 'menu-exam-upload', name: '上传答题文件', path: '', icon: '', parentId: 'menu-exam', sortOrder: 1, visible: true, type: 'button' },
+  { id: 'menu-exam-batch', name: '批量上传', path: '', icon: '', parentId: 'menu-exam', sortOrder: 2, visible: true, type: 'button' },
+  { id: 'menu-exam-delete', name: '删除文件', path: '', icon: '', parentId: 'menu-exam', sortOrder: 3, visible: true, type: 'button' },
+  { id: 'menu-cycle-manage', name: '周期管理操作', path: '', icon: '', parentId: 'menu-cycle', sortOrder: 1, visible: true, type: 'button' },
 ];
 
 // Helper: build tree from flat list

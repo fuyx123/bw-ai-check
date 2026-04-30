@@ -59,9 +59,10 @@ const dataScopeLabelMap = {
   college: '院级角色',
   major: '专业级角色',
   class: '班级级角色',
+  personal: '个人级角色',
 } as const;
 
-const dataScopeOrder = ['school', 'college', 'major', 'class'] as const;
+const dataScopeOrder = ['school', 'college', 'major', 'class', 'personal'] as const;
 
 function buildRoleFilterOptions(roles: Role[]) {
   return dataScopeOrder
@@ -83,6 +84,69 @@ function buildRoleFilterOptions(roles: Role[]) {
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
+}
+
+function buildDepartmentMetaMap(departments: Department[]) {
+  return new Map(
+    departments.map((department) => [
+      department.id,
+      {
+        id: department.id,
+        name: department.name,
+        parentId: department.parentId,
+        level: department.level,
+      },
+    ])
+  );
+}
+
+function getDepartmentAncestors(
+  departmentId: string | undefined,
+  departmentMap: ReturnType<typeof buildDepartmentMetaMap>
+) {
+  const chain: Array<{ id: string; name: string; parentId: string | null; level: Department['level'] }> = [];
+  let currentId = departmentId;
+  while (currentId) {
+    const current = departmentMap.get(currentId);
+    if (!current) {
+      break;
+    }
+    chain.unshift(current);
+    currentId = current.parentId ?? undefined;
+  }
+  return chain;
+}
+
+function formatDepartmentPath(
+  departmentId: string | undefined,
+  departmentMap: ReturnType<typeof buildDepartmentMetaMap>
+) {
+  const chain = getDepartmentAncestors(departmentId, departmentMap);
+  const segments = chain
+    .filter((item) => item.level !== 'university' && item.level !== 'stage')
+    .map((item) => item.name);
+
+  return segments.join('/');
+}
+
+function resolveStudentLabels(
+  user: UserInfo,
+  departmentMap: ReturnType<typeof buildDepartmentMetaMap>
+) {
+  const classChain = getDepartmentAncestors(user.classId || user.departmentId, departmentMap);
+  const departmentChain = classChain.length > 0 ? classChain : getDepartmentAncestors(user.departmentId, departmentMap);
+  const collegeName = departmentChain.find((item) => item.level === 'college')?.name ?? '';
+  const majorName = departmentChain.find((item) => item.level === 'major')?.name ?? '';
+  const className =
+    departmentChain.find((item) => item.level === 'class')?.name ??
+    user.className ??
+    departmentMap.get(user.classId || user.departmentId)?.name ??
+    '';
+
+  return {
+    departmentText: [collegeName, majorName, className].filter(Boolean).join('/') || user.departmentName || '—',
+    classText: [majorName, className].filter(Boolean).join('/') || className || '—',
+  };
 }
 
 const UserPage: React.FC = () => {
@@ -124,8 +188,8 @@ const UserPage: React.FC = () => {
     [departments]
   );
 
-  const departmentNameMap = useMemo(
-    () => new Map(flattenDepartments.map((department) => [department.id, department.name])),
+  const departmentMetaMap = useMemo(
+    () => buildDepartmentMetaMap(flattenDepartments),
     [flattenDepartments]
   );
 
@@ -298,9 +362,9 @@ const UserPage: React.FC = () => {
           <div style={{ fontSize: 13, fontFamily: 'monospace', color: '#333' }}>
             {loginId}
           </div>
-          {record.userType === 'student' && record.className && (
+          {record.userType === 'student' && (
             <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
-              {record.grade} · {record.className}
+              {resolveStudentLabels(record, departmentMetaMap).classText}
             </div>
           )}
         </div>
@@ -310,24 +374,38 @@ const UserPage: React.FC = () => {
       title: '部门',
       dataIndex: 'departmentName',
       key: 'department',
-      width: 150,
-      render: (dept: string, record: UserInfo) => (
-        <span style={{ fontSize: 13 }}>
-          {dept || departmentNameMap.get(record.departmentId) || '—'}
-        </span>
-      ),
+      width: 220,
+      render: (dept: string, record: UserInfo) => {
+        const departmentText = record.userType === 'student'
+          ? resolveStudentLabels(record, departmentMetaMap).departmentText
+          : formatDepartmentPath(record.departmentId, departmentMetaMap) || dept || departmentMetaMap.get(record.departmentId)?.name || '—';
+
+        return (
+          <div
+            title={departmentText}
+            style={{
+              fontSize: 13,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {departmentText}
+          </div>
+        );
+      },
     },
     {
       title: '角色',
       dataIndex: 'roleName',
       key: 'role',
       width: 100,
-      render: (role: string) => (
+      render: (role: string, record: UserInfo) => (
         <Tag
-          color={roleTagColor[role] || '#8c8c8c'}
+          color={roleTagColor[record.userType === 'student' ? '学生' : role] || '#8c8c8c'}
           style={{ borderRadius: 4, fontSize: 12 }}
         >
-          {role}
+          {record.userType === 'student' ? '学生' : role}
         </Tag>
       ),
     },
@@ -542,6 +620,7 @@ const UserPage: React.FC = () => {
         )}
         rowKey="id"
         pagination={false}
+        scroll={{ x: 'max-content' }}
         style={{ marginTop: 16 }}
       />
 

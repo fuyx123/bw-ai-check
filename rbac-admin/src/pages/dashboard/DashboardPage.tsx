@@ -10,7 +10,6 @@ import {
 import { flattenDepartments } from '../../mocks/data/departments';
 import { users } from '../../mocks/data/users';
 import { roles } from '../../mocks/data/roles';
-import { positions } from '../../mocks/data/positions';
 import { useAuthStore } from '../../stores/authStore';
 
 // 各学院概览数据
@@ -108,6 +107,7 @@ const DashboardPage: React.FC = () => {
     college: '学院',
     major: '阶段',
     class: '班级',
+    personal: '个人',
   };
 
   const roleColumns = [
@@ -179,8 +179,8 @@ const DashboardPage: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="角色 / 岗位"
-              value={`${roles.length} / ${positions.length}`}
+              title="角色数量"
+              value={roles.length}
               prefix={<SafetyOutlined />}
               styles={{ content: { color: '#fa8c16' } }}
             />

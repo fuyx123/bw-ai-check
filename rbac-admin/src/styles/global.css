@@ -68,6 +68,38 @@ body {
   font-size: 18px;
 }
 
+.sidebar .ant-menu-submenu > .ant-menu-submenu-title {
+  color: var(--text-secondary);
+  margin: 4px 12px;
+  border-radius: 8px;
+  height: 44px;
+  line-height: 44px;
+}
+
+.sidebar .ant-menu-submenu > .ant-menu-submenu-title .anticon,
+.sidebar .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-title-content,
+.sidebar .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-submenu-arrow {
+  color: inherit !important;
+}
+
+.sidebar .ant-menu-submenu > .ant-menu-submenu-title:hover {
+  color: var(--text-white) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.sidebar .ant-menu-sub.ant-menu-inline {
+  background: rgba(255, 255, 255, 0.03) !important;
+  margin: 0 12px 8px;
+  border-radius: 12px;
+  padding: 6px 0;
+}
+
+.sidebar .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  margin: 2px 8px 2px 24px;
+  width: auto;
+  min-width: 0;
+}
+
 /* Logo */
 .sidebar-logo {
   display: flex;

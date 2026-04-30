@@ -12,6 +12,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/nwaples/rardecode"
@@ -33,6 +34,11 @@ type ExamService struct {
 	uploader   *uploader.Uploader
 	modelRepo  *repository.AIModelRepository
 	logger     *zap.Logger
+}
+
+type batchGradeTask struct {
+	record    *model.AnswerFile
+	fileBytes []byte
 }
 
 // NewExamService 创建阅卷管理服务
@@ -174,20 +180,18 @@ func (s *ExamService) GetGradingDetail(access AccessContext, id string) (*model.
 	return file, nil
 }
 
-// SubmitManualReview 提交人工复阅结果
-func (s *ExamService) SubmitManualReview(access AccessContext, id, comment string, score int) error {
+// ManualQuestionScore 单题人工评分
+type ManualQuestionScore struct {
+	No    int `json:"no"`
+	Score int `json:"score"`
+}
+
+// SubmitManualReview 提交人工复阅结果（逐题评分模式）
+// questionScores 为每道题的评分列表，总分自动汇总；comment 为整体批注
+func (s *ExamService) SubmitManualReview(access AccessContext, id, comment string, questionScores []ManualQuestionScore) error {
 	file, err := s.repo.FindByID(id)
 	if err != nil {
 		return fmt.Errorf("文件不存在")
-	}
-
-	// 检查是否为周考/月考
-	var session model.ExamSession
-	if err := s.db.Where("id = ?", file.ExamSessionID).First(&session).Error; err != nil {
-		return fmt.Errorf("考次不存在")
-	}
-	if session.Type != "weekly" && session.Type != "monthly" {
-		return fmt.Errorf("仅周考和月考支持人工复阅")
 	}
 
 	// 校验是否为该班级的指定阅卷老师
@@ -199,7 +203,19 @@ func (s *ExamService) SubmitManualReview(access AccessContext, id, comment strin
 		}
 	}
 
-	return s.repo.SaveManualReview(id, access.UserID, comment, score)
+	// 计算总分
+	total := 0
+	for _, qs := range questionScores {
+		total += qs.Score
+	}
+
+	// 序列化逐题评分为 JSON
+	detailBytes, err := json.Marshal(questionScores)
+	if err != nil {
+		return fmt.Errorf("序列化逐题评分失败: %w", err)
+	}
+
+	return s.repo.SaveManualReview(id, access.UserID, comment, total, string(detailBytes))
 }
 
 // checkGradingDetailAccess 校验阅卷明细访问权限
@@ -217,24 +233,20 @@ func (s *ExamService) checkGradingDetailAccess(access AccessContext, file *model
 		return nil
 	}
 
-	// 检查是否为周考/月考
-	var session model.ExamSession
-	if err := s.db.Where("id = ?", file.ExamSessionID).First(&session).Error; err != nil {
-		return nil // 查询失败不拦截
-	}
-	if session.Type != "weekly" && session.Type != "monthly" {
-		return nil // 日考无限制
-	}
-
-	// 是否为该考次的阅卷老师
-	_, graderErr := s.graderRepo.FindByGraderAndSession(access.UserID, file.ExamSessionID)
-	if graderErr == nil {
-		return nil // 阅卷老师有权限
+	// 当班讲师可查看自己班级下的全部记录，含周考/月考上传明细。
+	if access.DataScope == "class" {
+		if file.ClassID != access.DepartmentID {
+			return fmt.Errorf("无权查看该班级的阅卷明细")
+		}
+		return nil
 	}
 
-	// 当班老师：只有 reviewed 状态才能查看
-	if file.Status != "reviewed" {
-		return fmt.Errorf("阅卷老师尚未完成复阅，暂无权限查看")
+	accessible, err := resolveAccessibleDepartmentIDs(s.db, access)
+	if err != nil {
+		return err
+	}
+	if !departmentAccessible(accessible, file.ClassID) {
+		return fmt.Errorf("无权查看该班级的阅卷明细")
 	}
 	return nil
 }
@@ -269,8 +281,15 @@ func (s *ExamService) BatchUpload(access AccessContext, fh *multipart.FileHeader
 	tmpFile.Close()
 
 	uploaderName, uploaderType, fileClassID, fileClassName := s.resolveUploaderInfo(access, classID, className)
+	if uploaderType == "staff" {
+		uploaderType = "student"
+		if archiveName := archiveDisplayName(fh.Filename); archiveName != "" {
+			uploaderName = archiveName
+		}
+	}
 	batchID := newID("batch")
 	var records []*model.AnswerFile
+	var gradeTasks []batchGradeTask
 
 	err = extractWordFiles(tmpFile.Name(), fh.Filename, func(entryName string, reader io.Reader, _ int64) error {
 		// 读取完整字节：io.ReadAll 对二进制安全，不经过 string 转换
@@ -285,7 +304,7 @@ func (s *ExamService) BatchUpload(access AccessContext, fh *multipart.FileHeader
 			return fmt.Errorf("上传 %s 失败: %w", entryName, uploadErr)
 		}
 
-		records = append(records, &model.AnswerFile{
+		record := &model.AnswerFile{
 			ID:            newID("af"),
 			ExamSessionID: examSessionID,
 			UploaderID:    access.UserID,
@@ -299,6 +318,11 @@ func (s *ExamService) BatchUpload(access AccessContext, fh *multipart.FileHeader
 			ClassName:     fileClassName,
 			BatchID:       batchID,
 			Status:        "uploaded",
+		}
+		records = append(records, record)
+		gradeTasks = append(gradeTasks, batchGradeTask{
+			record:    record,
+			fileBytes: data,
 		})
 		return nil
 	})
@@ -318,13 +342,20 @@ func (s *ExamService) BatchUpload(access AccessContext, fh *multipart.FileHeader
 		zap.String("batchId", batchID),
 		zap.Int("count", len(records)),
 	)
+
+	for _, task := range gradeTasks {
+		record := task.record
+		fileBytes := task.fileBytes
+		go s.gradeWithAI(record, fileBytes)
+	}
+
 	return records, nil
 }
 
 // List 查询文件列表（含数据权限过滤）
 //
 //	学生：只看自己提交的文件
-//	讲师（class scope）：看本班级全部文件；对周考/月考只看 reviewed，除非自己是阅卷老师
+//	讲师（class scope）：看本班级全部文件
 //	专业主任/院长/校长/教务：看全部
 func (s *ExamService) List(access AccessContext, page, pageSize int, classID, examSessionID, cycleID string) ([]*model.AnswerFile, int64, error) {
 	page, pageSize = normalizePage(page, pageSize)
@@ -335,16 +366,12 @@ func (s *ExamService) List(access AccessContext, page, pageSize int, classID, ex
 		filter.UploaderID = access.UserID
 
 	case access.DataScope == "class":
-		// 当班老师：班级范围；对周考/月考加访问限制
+		// 当班老师：班级范围内的上传记录全部可见
 		if classID != "" {
 			filter.ClassID = classID
 		} else {
 			filter.ClassID = access.DepartmentID
 		}
-		// 获取该老师担任阅卷老师的考次（这些考次不限制）
-		grantedIDs, _ := s.graderRepo.FindSessionIDsByGrader(access.UserID)
-		filter.RestrictWeeklyMonthly = true
-		filter.GrantedSessionIDs = grantedIDs
 
 	case access.DataScope == "school":
 		// 校长/教务：全量，可选班级筛选
@@ -374,43 +401,51 @@ type ClassOption struct {
 
 // GetAccessibleClasses 返回当前用户可访问的班级列表
 func (s *ExamService) GetAccessibleClasses(access AccessContext) ([]ClassOption, error) {
+	depts, err := loadDepartments(s.db)
+	if err != nil {
+		return nil, fmt.Errorf("读取组织架构失败: %w", err)
+	}
+
+	items := make([]ClassOption, 0)
+	for _, dept := range depts {
+		if dept.Level != "class" {
+			continue
+		}
+		items = append(items, ClassOption{
+			ID:   dept.ID,
+			Name: buildDepartmentPathName(dept.ID, depts),
+		})
+	}
+
 	switch access.DataScope {
 	case "school":
-		var depts []model.Department
-		if err := s.db.Where("level = 'class'").Order("name").Find(&depts).Error; err != nil {
-			return nil, err
-		}
-		result := make([]ClassOption, len(depts))
-		for i, d := range depts {
-			result[i] = ClassOption{ID: d.ID, Name: d.Name}
-		}
-		return result, nil
+		slices.SortFunc(items, func(a, b ClassOption) int { return strings.Compare(a.Name, b.Name) })
+		return items, nil
 
 	case "class":
-		var dept model.Department
-		if err := s.db.Select("id, name").Where("id = ?", access.DepartmentID).First(&dept).Error; err != nil {
-			return nil, nil
+		for _, item := range items {
+			if item.ID == access.DepartmentID {
+				return []ClassOption{item}, nil
+			}
 		}
-		return []ClassOption{{ID: dept.ID, Name: dept.Name}}, nil
+		return nil, nil
 
 	default:
 		accessible, err := resolveAccessibleDepartmentIDs(s.db, access)
 		if err != nil {
 			return nil, err
 		}
-		ids := idsFromSet(accessible)
-		if len(ids) == 0 {
+		if len(accessible) == 0 {
 			return nil, nil
 		}
-		var depts []model.Department
-		if err := s.db.Where("id IN ? AND level = 'class'", ids).Order("name").Find(&depts).Error; err != nil {
-			return nil, err
+		filtered := make([]ClassOption, 0, len(items))
+		for _, item := range items {
+			if _, ok := accessible[item.ID]; ok {
+				filtered = append(filtered, item)
+			}
 		}
-		result := make([]ClassOption, len(depts))
-		for i, d := range depts {
-			result[i] = ClassOption{ID: d.ID, Name: d.Name}
-		}
-		return result, nil
+		slices.SortFunc(filtered, func(a, b ClassOption) int { return strings.Compare(a.Name, b.Name) })
+		return filtered, nil
 	}
 }
 
@@ -496,16 +531,12 @@ func (s *ExamService) resolveUploaderInfo(access AccessContext, classID, classNa
 	}
 
 	if typ == "student" {
-		// 学生：班级来自自身档案
-		if classID == "" && user.ClassID != nil {
+		// 学生：班级始终来自 DB 档案，忽略前端传入的 classID/className
+		if user.ClassID != nil {
 			cid = *user.ClassID
-		} else {
-			cid = classID
 		}
-		if className == "" && user.ClassName != nil {
+		if user.ClassName != nil {
 			cname = *user.ClassName
-		} else {
-			cname = className
 		}
 	} else {
 		// 教职工：优先使用传入参数，没有则用 DepartmentID（讲师的部门即其班级）
@@ -562,6 +593,19 @@ func archiveSuffix(name string) string {
 		}
 	}
 	return filepath.Ext(name)
+}
+
+func archiveDisplayName(name string) string {
+	base := filepath.Base(strings.TrimSpace(name))
+	if base == "" {
+		return ""
+	}
+
+	suffix := archiveSuffix(base)
+	if suffix != "" && strings.HasSuffix(strings.ToLower(base), strings.ToLower(suffix)) {
+		base = base[:len(base)-len(suffix)]
+	}
+	return strings.TrimSpace(base)
 }
 
 // extractWordFiles 从压缩包中提取所有 Word 文件，对每个有效条目调用 fn

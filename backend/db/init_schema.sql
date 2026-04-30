@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS roles (
   id VARCHAR(50) PRIMARY KEY COMMENT '角色唯一标识',
   name VARCHAR(100) NOT NULL UNIQUE COMMENT '角色名称（校长、院长、讲师等）',
   description VARCHAR(255) COMMENT '角色描述',
-  data_scope ENUM('school', 'college', 'major', 'class') DEFAULT 'school' COMMENT '数据范围：school-学校级，college-学院级，major-专业级，class-班级级',
+  data_scope ENUM('school', 'college', 'major', 'class', 'personal') DEFAULT 'school' COMMENT '数据范围：school-学校级，college-学院级，major-专业级，class-班级级，personal-个人级',
   user_count INT DEFAULT 0 COMMENT '拥有该角色的用户数量',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -104,44 +104,6 @@ CREATE TABLE IF NOT EXISTS user_roles (
   KEY idx_role_id (role_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户角色关联表：记录用户拥有的角色（一个用户可以有多个角色）';
 
--- 岗位分类表
-CREATE TABLE IF NOT EXISTS position_categories (
-  code VARCHAR(50) PRIMARY KEY COMMENT '岗位分类代码',
-  name VARCHAR(100) NOT NULL COMMENT '分类名称（教学、科研、行政、辅助等）',
-  color VARCHAR(20) COMMENT '分类颜色代码（用于UI展示）',
-  icon VARCHAR(100) COMMENT '分类图标类名',
-  sort_order INT DEFAULT 0 COMMENT '排序序号',
-  description VARCHAR(255) COMMENT '分类描述',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='岗位分类表：定义岗位的分类（教学、科研、行政、辅助）';
-
--- 岗位表
-CREATE TABLE IF NOT EXISTS positions (
-  id VARCHAR(50) PRIMARY KEY COMMENT '岗位唯一标识',
-  name VARCHAR(100) NOT NULL COMMENT '岗位名称（教授、讲师等）',
-  code VARCHAR(50) NOT NULL UNIQUE COMMENT '岗位代码',
-  category_code VARCHAR(50) COMMENT '岗位分类代码',
-  level INT DEFAULT 1 COMMENT '岗位等级，值越大等级越高',
-  description VARCHAR(255) COMMENT '岗位描述',
-  headcount INT DEFAULT 1 COMMENT '岗位编制人数',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  FOREIGN KEY (category_code) REFERENCES position_categories(code),
-  KEY idx_category (category_code),
-  KEY idx_level (level)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='岗位表：定义组织内的各类岗位';
-
--- 用户岗位关联表
-CREATE TABLE IF NOT EXISTS user_positions (
-  user_id VARCHAR(50) NOT NULL COMMENT '用户ID',
-  position_id VARCHAR(50) NOT NULL COMMENT '岗位ID',
-  PRIMARY KEY (user_id, position_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (position_id) REFERENCES positions(id) ON DELETE CASCADE,
-  KEY idx_position_id (position_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户岗位关联表：记录用户承担的岗位（一个用户可以有多个岗位）';
-
 -- 职级表
 CREATE TABLE IF NOT EXISTS grades (
   id VARCHAR(50) PRIMARY KEY COMMENT '职级唯一标识',
@@ -166,3 +128,58 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   KEY idx_operator (operator),
   KEY idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='审计日志表：记录系统中的所有重要操作';
+
+-- 作业任务表
+CREATE TABLE IF NOT EXISTS homework_tasks (
+  id VARCHAR(64) PRIMARY KEY COMMENT '作业任务ID',
+  title VARCHAR(255) NOT NULL COMMENT '作业标题',
+  description TEXT COMMENT '作业说明',
+  publish_date VARCHAR(32) NOT NULL COMMENT '发布日期',
+  check_date VARCHAR(32) NOT NULL COMMENT '统计日期',
+  is_active BOOLEAN DEFAULT TRUE COMMENT '是否启用',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  deleted_at TIMESTAMP NULL COMMENT '软删除时间',
+  KEY idx_publish_date (publish_date),
+  KEY idx_check_date (check_date),
+  KEY idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='作业任务表';
+
+-- 作业任务班级关联表
+CREATE TABLE IF NOT EXISTS homework_task_classes (
+  homework_id VARCHAR(64) NOT NULL COMMENT '作业任务ID',
+  class_id VARCHAR(64) NOT NULL COMMENT '班级ID',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (homework_id, class_id),
+  KEY idx_homework_class (class_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='作业任务班级关联表';
+
+-- 作业提交表
+CREATE TABLE IF NOT EXISTS homework_submissions (
+  id VARCHAR(64) PRIMARY KEY COMMENT '提交ID',
+  homework_id VARCHAR(64) NOT NULL COMMENT '作业任务ID',
+  student_id VARCHAR(64) NOT NULL COMMENT '学生ID',
+  student_name VARCHAR(128) NOT NULL COMMENT '学生姓名',
+  class_id VARCHAR(64) NOT NULL COMMENT '班级ID',
+  class_name VARCHAR(255) COMMENT '班级名称',
+  archive_file_key VARCHAR(1024) NOT NULL COMMENT '压缩包存储Key',
+  archive_original_name VARCHAR(512) NOT NULL COMMENT '压缩包原始文件名',
+  doc_file_key VARCHAR(1024) COMMENT '作业文档存储Key',
+  doc_original_name VARCHAR(512) COMMENT '作业文档文件名',
+  doc_content LONGTEXT COMMENT '作业文档解析文本',
+  code_summary LONGTEXT COMMENT '代码摘要',
+  review_status VARCHAR(32) NOT NULL COMMENT '审批状态',
+  review_score INT DEFAULT 0 COMMENT '审批得分',
+  review_comment TEXT COMMENT '审批摘要',
+  review_detail LONGTEXT COMMENT '结构化审批明细',
+  submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '提交时间',
+  reviewed_at TIMESTAMP NULL COMMENT '审批完成时间',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  deleted_at TIMESTAMP NULL COMMENT '软删除时间',
+  KEY idx_homework_id (homework_id),
+  KEY idx_student_id (student_id),
+  KEY idx_class_id (class_id),
+  KEY idx_review_status (review_status),
+  KEY idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='作业提交与审批结果表';

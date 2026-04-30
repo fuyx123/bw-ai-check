@@ -1,22 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Card, Descriptions, Tag, Button, Form, InputNumber, Input,
-  Spin, Alert, Progress, Typography, Space, Divider, message,
+  Card, Descriptions, Tag, Button, InputNumber, Input,
+  Spin, Alert, Progress, Typography, Space, Divider, message, Table,
 } from 'antd';
 import {
   ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  EditOutlined, CheckOutlined,
+  EditOutlined, CheckOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
   type AnswerFile,
   type GradingDetail,
   type QuestionResult,
+  type ManualQuestionScore,
   fetchGradingDetail,
   submitManualReview,
 } from '../../services/exam';
 import { useAuthStore } from '../../stores/authStore';
+import { exportGradingDetailToExcel } from '../../utils/exportGradingDetail';
 
 const { Text, Paragraph } = Typography;
 
@@ -27,6 +29,19 @@ function parseDetail(raw: string): GradingDetail | null {
     return JSON.parse(raw) as GradingDetail;
   } catch {
     return null;
+  }
+}
+
+// 解析 ManualDetail JSON 字符串为 题号→分数 映射
+function parseManualDetail(raw: string): Record<number, number> {
+  if (!raw) return {};
+  try {
+    const arr = JSON.parse(raw) as ManualQuestionScore[];
+    const map: Record<number, number> = {};
+    arr.forEach((item) => { map[item.no] = item.score; });
+    return map;
+  } catch {
+    return {};
   }
 }
 
@@ -43,8 +58,9 @@ function statusLabel(status: string) {
 }
 
 // 单题卡片
-const QuestionCard: React.FC<{ q: QuestionResult; idx: number }> = ({ q, idx }) => {
-  const passed = q.correctRate > 60;
+const QuestionCard: React.FC<{ q: QuestionResult; idx: number; manualScore?: number }> = ({ q, idx, manualScore }) => {
+  const passed = q.correctRate > 80;
+  const hasManual = manualScore !== undefined;
   return (
     <Card
       size="small"
@@ -52,9 +68,18 @@ const QuestionCard: React.FC<{ q: QuestionResult; idx: number }> = ({ q, idx }) 
       title={
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 600 }}>第 {q.no || idx + 1} 题</span>
-          {passed
-            ? <Tag icon={<CheckCircleOutlined />} color="success" style={{ flexShrink: 0 }}>得分 {q.score}/{q.maxScore}</Tag>
-            : <Tag icon={<CloseCircleOutlined />} color="error" style={{ flexShrink: 0 }}>得分 {q.score}/{q.maxScore}</Tag>}
+          {hasManual ? (
+            <Tag icon={<CheckCircleOutlined />} color="success" style={{ flexShrink: 0 }}>
+              人工 {manualScore}/{q.maxScore}
+            </Tag>
+          ) : (
+            passed
+              ? <Tag icon={<CheckCircleOutlined />} color="success" style={{ flexShrink: 0 }}>得分 {q.score}/{q.maxScore}</Tag>
+              : <Tag icon={<CloseCircleOutlined />} color="error" style={{ flexShrink: 0 }}>得分 {q.score}/{q.maxScore}</Tag>
+          )}
+          {hasManual && (
+            <Tag color="default" style={{ flexShrink: 0, color: '#999' }}>AI {q.score}/{q.maxScore}</Tag>
+          )}
           {q.title && (
             <span style={{ fontSize: 13, color: '#595959', fontWeight: 400, wordBreak: 'break-all' }}>
               {q.title}
@@ -114,7 +139,11 @@ const GradingDetailPage: React.FC = () => {
   const [detail, setDetail] = useState<GradingDetail | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form] = Form.useForm();
+  const [exporting, setExporting] = useState(false);
+
+  // 逐题人工评分状态：题号 → 分数
+  const [questionScores, setQuestionScores] = useState<Record<number, number>>({});
+  const [manualComment, setManualComment] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -122,10 +151,18 @@ const GradingDetailPage: React.FC = () => {
     fetchGradingDetail(id)
       .then((f) => {
         setFile(f);
-        setDetail(parseDetail(f.aiDetail));
-        // 预填已有的人工复阅分数
-        if (f.manualScore != null) {
-          form.setFieldsValue({ manualScore: f.manualScore, manualComment: f.manualComment });
+        const parsedDetail = parseDetail(f.aiDetail);
+        setDetail(parsedDetail);
+        setManualComment(f.manualComment ?? '');
+
+        // 预填已有人工逐题评分；若无则用 AI 分数作为默认值
+        const existingMap = parseManualDetail(f.manualDetail ?? '');
+        if (Object.keys(existingMap).length > 0) {
+          setQuestionScores(existingMap);
+        } else if (parsedDetail?.questions) {
+          const defaultMap: Record<number, number> = {};
+          parsedDetail.questions.forEach((q) => { defaultMap[q.no] = q.score; });
+          setQuestionScores(defaultMap);
         }
       })
       .catch((err) => {
@@ -134,13 +171,34 @@ const GradingDetailPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleReviewSubmit = async (values: { manualScore: number; manualComment: string }) => {
-    if (!id) return;
+  // 人工总分实时计算
+  const manualTotal = useMemo(
+    () => Object.values(questionScores).reduce((s, v) => s + (v || 0), 0),
+    [questionScores],
+  );
+
+  const handleExport = async () => {
+    if (!file) return;
+    setExporting(true);
+    try {
+      await exportGradingDetailToExcel(file, detail);
+    } catch {
+      message.error('导出失败，请重试');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!id || !detail?.questions) return;
     setSubmitting(true);
     try {
-      await submitManualReview(id, { manualScore: values.manualScore, manualComment: values.manualComment });
+      const scores: ManualQuestionScore[] = detail.questions.map((q) => ({
+        no: q.no,
+        score: questionScores[q.no] ?? 0,
+      }));
+      await submitManualReview(id, { questionScores: scores, comment: manualComment });
       message.success('复阅结果已保存');
-      // 刷新数据
       const updated = await fetchGradingDetail(id);
       setFile(updated);
     } catch {
@@ -183,6 +241,8 @@ const GradingDetailPage: React.FC = () => {
 
   const displayScore = file.manualScore != null ? file.manualScore : (detail?.totalScore ?? file.aiScore);
   const isManualDone = file.status === 'reviewed';
+  const manualScoreMap = parseManualDetail(file.manualDetail ?? '');
+  const maxTotal = detail?.questions?.reduce((s, q) => s + q.maxScore, 0) ?? 0;
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px' }}>
@@ -190,6 +250,15 @@ const GradingDetailPage: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, gap: 12 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>返回</Button>
         <span style={{ fontSize: 18, fontWeight: 600 }}>阅卷明细</span>
+        <div style={{ flex: 1 }} />
+        <Button
+          icon={<DownloadOutlined />}
+          loading={exporting}
+          onClick={() => { void handleExport(); }}
+          disabled={file.status === 'uploaded' || file.status === 'grading'}
+        >
+          导出 Excel
+        </Button>
       </div>
 
       {/* 文件基本信息 */}
@@ -231,7 +300,12 @@ const GradingDetailPage: React.FC = () => {
       {detail?.questions && detail.questions.length > 0 ? (
         <Card title="逐题评分" style={{ marginBottom: 16 }}>
           {detail.questions.map((q, idx) => (
-            <QuestionCard key={idx} q={q} idx={idx} />
+            <QuestionCard
+              key={idx}
+              q={q}
+              idx={idx}
+              manualScore={isManualDone ? manualScoreMap[q.no] : undefined}
+            />
           ))}
         </Card>
       ) : (
@@ -248,41 +322,96 @@ const GradingDetailPage: React.FC = () => {
         )
       )}
 
-      {/* 人工复阅表单（仅阅卷老师 + 高权限可见，且状态不是 uploaded/grading） */}
-      {canReview && file.status !== 'uploaded' && file.status !== 'grading' && (
+      {/* 人工复阅区域（仅阅卷老师 + 高权限可见，且状态不是 uploaded/grading） */}
+      {canReview && file.status !== 'uploaded' && file.status !== 'grading' && detail?.questions && (
         <>
           <Divider><EditOutlined /> 人工复阅</Divider>
           <Card>
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleReviewSubmit}
-              initialValues={{ manualScore: detail?.totalScore ?? file.aiScore }}
+            {/* 逐题打分表格 */}
+            <Table
+              size="small"
+              pagination={false}
+              style={{ marginBottom: 16 }}
+              dataSource={detail.questions.map((q) => ({ ...q, key: q.no }))}
+              columns={[
+                {
+                  title: '题号',
+                  dataIndex: 'no',
+                  width: 60,
+                  render: (v: number) => `第 ${v} 题`,
+                },
+                {
+                  title: '题目',
+                  dataIndex: 'title',
+                  ellipsis: true,
+                  render: (v: string) => <span title={v} style={{ fontSize: 12 }}>{v || '—'}</span>,
+                },
+                {
+                  title: '满分',
+                  dataIndex: 'maxScore',
+                  width: 60,
+                  align: 'center' as const,
+                },
+                {
+                  title: 'AI 分',
+                  dataIndex: 'score',
+                  width: 70,
+                  align: 'center' as const,
+                  render: (v: number) => <Tag color="blue">{v}</Tag>,
+                },
+                {
+                  title: '人工分',
+                  width: 120,
+                  align: 'center' as const,
+                  render: (_: unknown, record: QuestionResult) => (
+                    <InputNumber
+                      min={0}
+                      max={record.maxScore}
+                      value={questionScores[record.no] ?? 0}
+                      onChange={(val) =>
+                        setQuestionScores((prev) => ({ ...prev, [record.no]: val ?? 0 }))
+                      }
+                      size="small"
+                      style={{ width: 80 }}
+                    />
+                  ),
+                },
+              ]}
+              summary={() => (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0} colSpan={4} align="right">
+                    <Text strong>人工总分</Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="center">
+                    <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
+                      {manualTotal} / {maxTotal}
+                    </Text>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              )}
+            />
+
+            {/* 整体批注 */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>整体批注（可选）</div>
+              <Input.TextArea
+                rows={4}
+                placeholder="请输入复阅批注"
+                maxLength={1000}
+                showCount
+                value={manualComment}
+                onChange={(e) => setManualComment(e.target.value)}
+              />
+            </div>
+
+            <Button
+              type="primary"
+              icon={<CheckOutlined />}
+              loading={submitting}
+              onClick={() => { void handleReviewSubmit(); }}
             >
-              <Form.Item
-                label="人工评分"
-                name="manualScore"
-                rules={[
-                  { required: true, message: '请输入分数' },
-                  { type: 'number', min: 0, max: 200, message: '分数需在 0-200 之间' },
-                ]}
-              >
-                <InputNumber min={0} max={200} style={{ width: 160 }} addonAfter="分" />
-              </Form.Item>
-              <Form.Item label="复阅批注" name="manualComment">
-                <Input.TextArea rows={4} placeholder="请输入复阅批注（可选）" maxLength={1000} showCount />
-              </Form.Item>
-              <Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  icon={<CheckOutlined />}
-                  loading={submitting}
-                >
-                  {isManualDone ? '更新复阅结果' : '提交复阅'}
-                </Button>
-              </Form.Item>
-            </Form>
+              {isManualDone ? '更新复阅结果' : '提交复阅'}
+            </Button>
           </Card>
         </>
       )}

@@ -14,18 +14,18 @@ var (
 
 // Claims JWT claims
 type Claims struct {
-	UserID     string `json:"userId"`
-	LoginID    string `json:"loginId"`
-	UserType   string `json:"userType"`   // student | staff
-	DataScope  string `json:"dataScope"`  // school | college | major | class
-	RoleID     string `json:"roleId"`
+	UserID       string `json:"userId"`
+	LoginID      string `json:"loginId"`
+	UserType     string `json:"userType"`  // student | staff
+	DataScope    string `json:"dataScope"` // school | college | major | class | personal
+	RoleID       string `json:"roleId"`
 	DepartmentID string `json:"departmentId"`
 	jwt.RegisteredClaims
 }
 
 var (
-	signingKey      = []byte("") // 设置在 SetSigningKey
-	expireDuration  = 24 * time.Hour
+	signingKey     = []byte("") // 设置在 SetSigningKey
+	expireDuration = 24 * time.Hour
 )
 
 // SetSigningKey 设置签名密钥（从配置读取）

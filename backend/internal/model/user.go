@@ -28,7 +28,6 @@ type User struct {
 
 	// Relations
 	Roles []Role `gorm:"many2many:user_roles;foreignKey:ID;joinForeignKey:UserID;references:ID;joinReferences:RoleID" json:"-"`
-	Positions []Position `gorm:"many2many:user_positions;foreignKey:ID;joinForeignKey:PositionID;references:ID;joinReferences:UserID" json:"-"`
 
 	// Runtime fields
 	RoleIds   []string `gorm:"-" json:"roleIds"`

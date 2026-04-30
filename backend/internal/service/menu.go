@@ -61,6 +61,12 @@ func (s *MenuService) GetUserMenus(access AccessContext) ([]model.Menu, error) {
 	if err := s.db.Where("id IN ?", menuIDs).Find(&menus).Error; err != nil {
 		return nil, fmt.Errorf("failed to query user menus: %w", err)
 	}
+
+	allMenus, err := s.menuRepo.FindAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to query menu ancestors: %w", err)
+	}
+	menus = expandMenuAncestors(menus, allMenus)
 	return buildMenuTree(menus), nil
 }
 
@@ -262,4 +268,43 @@ func buildMenuTree(menus []model.Menu) []model.Menu {
 // collectMenuDeleteOrder 收集删除顺序（兼容现有接口）
 func collectMenuDeleteOrder(rootID string, menus []model.Menu) []string {
 	return NewMenuTreeBuilder(menus).CollectDeleteIDs(rootID)
+}
+
+func expandMenuAncestors(menus []model.Menu, allMenus []model.Menu) []model.Menu {
+	menuByID := make(map[string]model.Menu, len(allMenus))
+	for _, menu := range allMenus {
+		menuByID[menu.ID] = menu
+	}
+
+	selected := make(map[string]model.Menu, len(menus))
+	for _, menu := range menus {
+		selected[menu.ID] = menu
+	}
+
+	for {
+		added := false
+		for _, menu := range selected {
+			if menu.ParentID == nil {
+				continue
+			}
+			if _, exists := selected[*menu.ParentID]; exists {
+				continue
+			}
+			parent, exists := menuByID[*menu.ParentID]
+			if !exists {
+				continue
+			}
+			selected[*menu.ParentID] = parent
+			added = true
+		}
+		if !added {
+			break
+		}
+	}
+
+	result := make([]model.Menu, 0, len(selected))
+	for _, menu := range selected {
+		result = append(result, menu)
+	}
+	return result
 }

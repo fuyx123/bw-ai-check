@@ -21,33 +21,33 @@ type UserFilter struct {
 
 // CreateUserReq 创建用户请求
 type CreateUserReq struct {
-	Name           string `json:"name" binding:"required"`
-	Email          string `json:"email" binding:"required,email"`
-	LoginID        string `json:"loginId" binding:"required"`
-	Password       string `json:"password" binding:"required,min=6"`
-	UserType       string `json:"userType" binding:"required,oneof=staff student"`
-	DepartmentID   string `json:"departmentId" binding:"required"`
-	RoleIds        []string `json:"roleIds"`
-	AccessStatus   string `json:"accessStatus" binding:"required,oneof=full partial inactive"`
-	IsActive       bool   `json:"isActive"`
-	Avatar         *string `json:"avatar"`
-	Grade          *string `json:"grade"`       // student only
-	ClassName      *string `json:"className"`   // student only
-	ClassID        *string `json:"classId"`     // student only
+	Name         string   `json:"name" binding:"required"`
+	Email        string   `json:"email" binding:"required,email"`
+	LoginID      string   `json:"loginId" binding:"required"`
+	Password     string   `json:"password" binding:"required,min=6"`
+	UserType     string   `json:"userType" binding:"required,oneof=staff student"`
+	DepartmentID string   `json:"departmentId" binding:"required"`
+	RoleIds      []string `json:"roleIds"`
+	AccessStatus string   `json:"accessStatus" binding:"required,oneof=full partial inactive"`
+	IsActive     bool     `json:"isActive"`
+	Avatar       *string  `json:"avatar"`
+	Grade        *string  `json:"grade"`     // student only
+	ClassName    *string  `json:"className"` // student only
+	ClassID      *string  `json:"classId"`   // student only
 }
 
 // UpdateUserReq 更新用户请求
 type UpdateUserReq struct {
-	Name           *string   `json:"name"`
-	Email          *string   `json:"email" binding:"omitempty,email"`
-	DepartmentID   *string   `json:"departmentId"`
-	RoleIds        *[]string `json:"roleIds"`
-	AccessStatus   *string   `json:"accessStatus" binding:"omitempty,oneof=full partial inactive"`
-	IsActive       *bool     `json:"isActive"`
-	Avatar         *string   `json:"avatar"`
-	Grade          *string   `json:"grade"`
-	ClassName      *string   `json:"className"`
-	ClassID        *string   `json:"classId"`
+	Name         *string   `json:"name"`
+	Email        *string   `json:"email" binding:"omitempty,email"`
+	DepartmentID *string   `json:"departmentId"`
+	RoleIds      *[]string `json:"roleIds"`
+	AccessStatus *string   `json:"accessStatus" binding:"omitempty,oneof=full partial inactive"`
+	IsActive     *bool     `json:"isActive"`
+	Avatar       *string   `json:"avatar"`
+	Grade        *string   `json:"grade"`
+	ClassName    *string   `json:"className"`
+	ClassID      *string   `json:"classId"`
 }
 
 // ToggleStatusReq 切换用户状态请求
@@ -64,14 +64,14 @@ type ResetPasswordReq struct {
 
 // CreateDeptReq 创建部门请求
 type CreateDeptReq struct {
-	Name         string `json:"name" binding:"required"`
-	Code         string `json:"code" binding:"required"`
+	Name         string  `json:"name" binding:"required"`
+	Code         string  `json:"code" binding:"required"`
 	ParentID     *string `json:"parentId"`
-	Level        string `json:"level" binding:"required"`
-	LeaderName   string `json:"leaderName"`
-	LeaderTitle  string `json:"leaderTitle"`
+	Level        string  `json:"level" binding:"required"`
+	LeaderName   string  `json:"leaderName"`
+	LeaderTitle  string  `json:"leaderTitle"`
 	LeaderAvatar *string `json:"leaderAvatar"`
-	StaffCount   int    `json:"staffCount"`
+	StaffCount   int     `json:"staffCount"`
 }
 
 // UpdateDeptReq 更新部门请求
@@ -91,14 +91,14 @@ type UpdateDeptReq struct {
 type CreateRoleReq struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
-	DataScope   string `json:"dataScope" binding:"required,oneof=school college major class"`
+	DataScope   string `json:"dataScope" binding:"required,oneof=school college major class personal"`
 }
 
 // UpdateRoleReq 更新角色基础信息
 type UpdateRoleReq struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
-	DataScope   *string `json:"dataScope" binding:"omitempty,oneof=school college major class"`
+	DataScope   *string `json:"dataScope" binding:"omitempty,oneof=school college major class personal"`
 }
 
 // UpdateRoleMenusReq 更新角色菜单请求
@@ -110,13 +110,13 @@ type UpdateRoleMenusReq struct {
 
 // CreateMenuReq 创建菜单请求
 type CreateMenuReq struct {
-	Name      string `json:"name" binding:"required"`
-	Path      string `json:"path" binding:"required"`
-	Icon      string `json:"icon"`
+	Name      string  `json:"name" binding:"required"`
+	Path      string  `json:"path" binding:"required"`
+	Icon      string  `json:"icon"`
 	ParentID  *string `json:"parentId"`
-	SortOrder int    `json:"sortOrder"`
-	Visible   bool   `json:"visible"`
-	Type      string `json:"type" binding:"required,oneof=menu button"`
+	SortOrder int     `json:"sortOrder"`
+	Visible   bool    `json:"visible"`
+	Type      string  `json:"type" binding:"required,oneof=menu button"`
 }
 
 // UpdateMenuReq 更新菜单请求
@@ -128,47 +128,6 @@ type UpdateMenuReq struct {
 	SortOrder *int    `json:"sortOrder"`
 	Visible   *bool   `json:"visible"`
 	Type      *string `json:"type"`
-}
-
-// ========== Position Requests ==========
-
-// CreatePositionReq 创建岗位请求
-type CreatePositionReq struct {
-	Name         string `json:"name" binding:"required"`
-	Code         string `json:"code" binding:"required"`
-	CategoryCode string `json:"categoryCode" binding:"required"`
-	Level        int    `json:"level"`
-	Description  string `json:"description"`
-	Headcount    int    `json:"headcount"`
-}
-
-// UpdatePositionReq 更新岗位请求
-type UpdatePositionReq struct {
-	Name         *string `json:"name"`
-	Code         *string `json:"code"`
-	CategoryCode *string `json:"categoryCode"`
-	Level        *int    `json:"level"`
-	Description  *string `json:"description"`
-	Headcount    *int    `json:"headcount"`
-}
-
-// CreatePositionCategoryReq 创建岗位类别请求
-type CreatePositionCategoryReq struct {
-	Code        string `json:"code" binding:"required"`
-	Name        string `json:"name" binding:"required"`
-	Color       string `json:"color" binding:"required"`
-	Icon        string `json:"icon" binding:"required"`
-	SortOrder   int    `json:"sortOrder" binding:"required"`
-	Description string `json:"description"`
-}
-
-// UpdatePositionCategoryReq 更新岗位类别请求
-type UpdatePositionCategoryReq struct {
-	Name        *string `json:"name"`
-	Color       *string `json:"color"`
-	Icon        *string `json:"icon"`
-	SortOrder   *int    `json:"sortOrder"`
-	Description *string `json:"description"`
 }
 
 // ========== Grade Requests ==========

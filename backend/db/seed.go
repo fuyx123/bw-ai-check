@@ -3,8 +3,8 @@ package db
 import (
 	"fmt"
 
-	"gorm.io/gorm"
 	"bw-ai-check/backend/internal/model"
+	"gorm.io/gorm"
 )
 
 // InitDatabase 初始化数据库（创建表和初始数据）
@@ -16,11 +16,11 @@ func InitDatabase(db *gorm.DB) error {
 		&model.Menu{},
 		&model.User{},
 		&model.UserRole{},
-		&model.PositionCategory{},
-		&model.Position{},
-		&model.UserPosition{},
 		&model.Grade{},
 		&model.AuditLog{},
+		&model.HomeworkTask{},
+		&model.HomeworkTaskClass{},
+		&model.HomeworkSubmission{},
 	); err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}
@@ -57,23 +57,11 @@ func InitDatabase(db *gorm.DB) error {
 		return err
 	}
 
-	if err := seedPositionCategories(db); err != nil {
-		return err
-	}
-
-	if err := seedPositions(db); err != nil {
-		return err
-	}
-
 	if err := seedGrades(db); err != nil {
 		return err
 	}
 
 	if err := seedUserRoles(db); err != nil {
-		return err
-	}
-
-	if err := seedUserPositions(db); err != nil {
 		return err
 	}
 
@@ -86,19 +74,27 @@ func InitDatabase(db *gorm.DB) error {
 
 func seedDepartments(db *gorm.DB) error {
 	departments := []model.Department{
-		{ID: "dept-root", Name: "东南联合大学", Code: "SEUU", ParentID: nil, Level: "university", LeaderName: "赵明远", LeaderTitle: "校长", StaffCount: 1284},
-		{ID: "dept-ie", Name: "信息工程学院", Code: "IE", ParentID: stringPtr("dept-root"), Level: "college", LeaderName: "刘建国", LeaderTitle: "院长", StaffCount: 312},
-		{ID: "dept-cs", Name: "计算机科学与技术", Code: "CS", ParentID: stringPtr("dept-ie"), Level: "major", LeaderName: "李德", LeaderTitle: "副教授", StaffCount: 84},
-		{ID: "dept-cs-ai-lab", Name: "智能计算实验室", Code: "CS-AI", ParentID: stringPtr("dept-cs"), Level: "major", LeaderName: "周鹏", LeaderTitle: "研究员", StaffCount: 18},
-		{ID: "dept-cs-sys", Name: "系统与架构研究室", Code: "CS-SYS", ParentID: stringPtr("dept-cs"), Level: "major", LeaderName: "何坤", LeaderTitle: "副教授", StaffCount: 12},
-		{ID: "dept-se", Name: "软件工程", Code: "SE", ParentID: stringPtr("dept-ie"), Level: "major", LeaderName: "王芳", LeaderTitle: "教授", StaffCount: 96},
-		{ID: "dept-se-cloud", Name: "云计算研究室", Code: "SE-CLOUD", ParentID: stringPtr("dept-se"), Level: "major", LeaderName: "吴刚", LeaderTitle: "讲师", StaffCount: 15},
-		{ID: "dept-network", Name: "网络工程", Code: "NET", ParentID: stringPtr("dept-ie"), Level: "major", LeaderName: "张明", LeaderTitle: "教授", StaffCount: 56},
-		{ID: "dept-review", Name: "学术评审部", Code: "REVIEW", ParentID: stringPtr("dept-root"), Level: "college", StaffCount: 28},
-		{ID: "dept-outreach", Name: "全球外联部", Code: "OUTREACH", ParentID: stringPtr("dept-root"), Level: "college", StaffCount: 15},
-		{ID: "dept-ethics", Name: "机构伦理部", Code: "ETHICS", ParentID: stringPtr("dept-root"), Level: "college", StaffCount: 12},
-		{ID: "dept-editorial", Name: "编辑委员会", Code: "EDITORIAL", ParentID: stringPtr("dept-root"), Level: "college", StaffCount: 8},
+		makeDepartment("dept-root", "北京八维研修学院", "BWYX", nil, "university", "王校长", "校长", 3200),
+		makeDepartment("dept-affairs", "教务部门", "AFFAIRS", stringPtr("dept-root"), "college", "李教务", "教务主任", 8),
 	}
+
+	colleges := []struct {
+		id   string
+		name string
+		code string
+	}{
+		{id: "dept-fs", name: "全栈开发学院", code: "FS"},
+		{id: "dept-cc", name: "云计算学院", code: "CC"},
+		{id: "dept-mc", name: "传媒学院", code: "MC"},
+		{id: "dept-gd", name: "游戏学院", code: "GD"},
+		{id: "dept-hm", name: "鸿蒙学院", code: "HM"},
+		{id: "dept-bd", name: "大数据学院", code: "BD"},
+	}
+
+	for _, college := range colleges {
+		departments = append(departments, buildCollegeDepartments(college.id, college.name, college.code)...)
+	}
+
 	return db.CreateInBatches(departments, 100).Error
 }
 
@@ -110,6 +106,7 @@ func seedRoles(db *gorm.DB) error {
 		{ID: "role-major-lead", Name: "专业负责人", Description: "负责专业相关的教学管理", DataScope: "major"},
 		{ID: "role-lecturer", Name: "讲师", Description: "教学和科研人员，基础权限", DataScope: "class"},
 		{ID: "role-admin-office", Name: "行政办公室", Description: "负责日常行政管理和综合协调", DataScope: "school"},
+		{ID: "role-student", Name: "学生", Description: "学生账号，仅保留基础访问能力", DataScope: "personal"},
 	}
 	return db.CreateInBatches(roles, 100).Error
 }
@@ -117,23 +114,44 @@ func seedRoles(db *gorm.DB) error {
 func seedMenus(db *gorm.DB) error {
 	menus := []model.Menu{
 		{ID: "menu-dashboard", Name: "工作台", Path: "/dashboard", Icon: "DashboardOutlined", SortOrder: 1, Visible: true, Type: "menu"},
-		{ID: "menu-dept", Name: "部门管理", Path: "/departments", Icon: "ApartmentOutlined", SortOrder: 2, Visible: true, Type: "menu"},
-		{ID: "menu-role", Name: "角色管理", Path: "/roles", Icon: "TeamOutlined", SortOrder: 3, Visible: true, Type: "menu"},
-		{ID: "menu-users", Name: "用户管理", Path: "/users", Icon: "UserOutlined", SortOrder: 4, Visible: true, Type: "menu"},
-		{ID: "menu-positions", Name: "职位管理", Path: "/positions", Icon: "SolutionOutlined", SortOrder: 5, Visible: true, Type: "menu"},
-		{ID: "menu-grade", Name: "职级管理", Path: "/grades", Icon: "BarChartOutlined", SortOrder: 6, Visible: true, Type: "menu"},
-		{ID: "menu-menus", Name: "菜单管理", Path: "/menus", Icon: "MenuOutlined", SortOrder: 7, Visible: true, Type: "menu"},
-		{ID: "menu-audit", Name: "审计日志", Path: "/audit-logs", Icon: "AuditOutlined", SortOrder: 10, Visible: true, Type: "menu"},
+		{ID: "menu-access", Name: "权限管理", Path: "", Icon: "SafetyOutlined", SortOrder: 2, Visible: true, Type: "menu"},
+		{ID: "menu-dept", Name: "部门管理", Path: "/departments", Icon: "ApartmentOutlined", ParentID: stringPtr("menu-access"), SortOrder: 1, Visible: true, Type: "menu"},
+		{ID: "menu-role", Name: "角色管理", Path: "/roles", Icon: "TeamOutlined", ParentID: stringPtr("menu-access"), SortOrder: 2, Visible: true, Type: "menu"},
+		{ID: "menu-user", Name: "用户管理", Path: "/users", Icon: "UserOutlined", ParentID: stringPtr("menu-access"), SortOrder: 3, Visible: true, Type: "menu"},
+		{ID: "menu-menu", Name: "菜单管理", Path: "/menus", Icon: "MenuOutlined", ParentID: stringPtr("menu-access"), SortOrder: 4, Visible: true, Type: "menu"},
+		{ID: "menu-audit", Name: "审计日志", Path: "/audit-logs", Icon: "AuditOutlined", SortOrder: 5, Visible: true, Type: "menu"},
+		{ID: "menu-exam", Name: "阅卷管理", Path: "/exam", Icon: "AuditOutlined", SortOrder: 6, Visible: true, Type: "menu"},
+		{ID: "menu-homework-approval", Name: "作业审批", Path: "/homework", Icon: "BookOutlined", SortOrder: 7, Visible: true, Type: "menu"},
+		{ID: "menu-cycle", Name: "教学周期管理", Path: "/cycles", Icon: "CalendarOutlined", SortOrder: 8, Visible: true, Type: "menu"},
+		{ID: "menu-model", Name: "模型管理", Path: "/models", Icon: "ApiOutlined", SortOrder: 9, Visible: true, Type: "menu"},
 
 		// 部门管理按钮
 		{ID: "menu-dept-add", Name: "新增部门", ParentID: stringPtr("menu-dept"), SortOrder: 1, Visible: true, Type: "button"},
 		{ID: "menu-dept-edit", Name: "编辑部门", ParentID: stringPtr("menu-dept"), SortOrder: 2, Visible: true, Type: "button"},
 		{ID: "menu-dept-delete", Name: "删除部门", ParentID: stringPtr("menu-dept"), SortOrder: 3, Visible: true, Type: "button"},
+		{ID: "menu-dept-export", Name: "导出架构", ParentID: stringPtr("menu-dept"), SortOrder: 4, Visible: true, Type: "button"},
+
+		// 角色管理按钮
+		{ID: "menu-role-add", Name: "创建角色", ParentID: stringPtr("menu-role"), SortOrder: 1, Visible: true, Type: "button"},
+		{ID: "menu-role-edit", Name: "编辑角色", ParentID: stringPtr("menu-role"), SortOrder: 2, Visible: true, Type: "button"},
+		{ID: "menu-role-delete", Name: "删除角色", ParentID: stringPtr("menu-role"), SortOrder: 3, Visible: true, Type: "button"},
+		{ID: "menu-role-assign", Name: "分配权限", ParentID: stringPtr("menu-role"), SortOrder: 4, Visible: true, Type: "button"},
 
 		// 用户管理按钮
-		{ID: "menu-user-add", Name: "新增用户", ParentID: stringPtr("menu-users"), SortOrder: 1, Visible: true, Type: "button"},
-		{ID: "menu-user-edit", Name: "编辑用户", ParentID: stringPtr("menu-users"), SortOrder: 2, Visible: true, Type: "button"},
-		{ID: "menu-user-delete", Name: "删除用户", ParentID: stringPtr("menu-users"), SortOrder: 3, Visible: true, Type: "button"},
+		{ID: "menu-user-add", Name: "新增用户", ParentID: stringPtr("menu-user"), SortOrder: 1, Visible: true, Type: "button"},
+		{ID: "menu-user-edit", Name: "编辑用户", ParentID: stringPtr("menu-user"), SortOrder: 2, Visible: true, Type: "button"},
+		{ID: "menu-user-delete", Name: "删除用户", ParentID: stringPtr("menu-user"), SortOrder: 3, Visible: true, Type: "button"},
+
+		// 菜单管理按钮
+		{ID: "menu-menu-add", Name: "新增菜单", ParentID: stringPtr("menu-menu"), SortOrder: 1, Visible: true, Type: "button"},
+		{ID: "menu-menu-edit", Name: "编辑菜单", ParentID: stringPtr("menu-menu"), SortOrder: 2, Visible: true, Type: "button"},
+		{ID: "menu-menu-delete", Name: "删除菜单", ParentID: stringPtr("menu-menu"), SortOrder: 3, Visible: true, Type: "button"},
+
+		// 阅卷、周期管理按钮
+		{ID: "menu-exam-upload", Name: "上传答题文件", ParentID: stringPtr("menu-exam"), SortOrder: 1, Visible: true, Type: "button"},
+		{ID: "menu-exam-batch", Name: "批量上传", ParentID: stringPtr("menu-exam"), SortOrder: 2, Visible: true, Type: "button"},
+		{ID: "menu-exam-delete", Name: "删除文件", ParentID: stringPtr("menu-exam"), SortOrder: 3, Visible: true, Type: "button"},
+		{ID: "menu-cycle-manage", Name: "周期管理操作", ParentID: stringPtr("menu-cycle"), SortOrder: 1, Visible: true, Type: "button"},
 	}
 	return db.CreateInBatches(menus, 100).Error
 }
@@ -157,7 +175,7 @@ func seedUsers(db *gorm.DB) error {
 			Name:         "刘建国",
 			Email:        "liu@seuu.edu",
 			Initials:     stringPtr("LJG"),
-			DepartmentID: "dept-ie",
+			DepartmentID: "dept-fs",
 			AccessStatus: "full",
 			IsActive:     true,
 			UserType:     "staff",
@@ -169,19 +187,19 @@ func seedUsers(db *gorm.DB) error {
 			Name:         "李德",
 			Email:        "li.de@seuu.edu",
 			Initials:     stringPtr("LD"),
-			DepartmentID: "dept-cs",
+			DepartmentID: "dept-fs-pro-stage-major-1-1",
 			AccessStatus: "full",
 			IsActive:     true,
-			UserType:     "staff",
-			LoginID:      "lecturer001",
-			PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86E36CHQa9C",
+			UserType:     "student",
+			LoginID:      "li.de@seuu.edu",
+			PasswordHash: "$2a$10$y1451U91b5MyKSN2bZVnuucMywzQ68ILnKsjpVCZ5.26sa7bPMo/i",
 		},
 		{
 			ID:           "user-001",
 			Name:         "Dr. Elena Rodriguez",
 			Email:        "elena.rodriguez@seuu.edu",
 			Initials:     stringPtr("ER"),
-			DepartmentID: "dept-review",
+			DepartmentID: "dept-affairs",
 			AccessStatus: "full",
 			IsActive:     true,
 			UserType:     "staff",
@@ -195,44 +213,81 @@ func seedUsers(db *gorm.DB) error {
 func seedRoleMenus(db *gorm.DB) error {
 	roleMenus := []model.RoleMenu{
 		{RoleID: "role-president", MenuID: "menu-dashboard"},
+		{RoleID: "role-president", MenuID: "menu-access"},
 		{RoleID: "role-president", MenuID: "menu-dept"},
 		{RoleID: "role-president", MenuID: "menu-dept-add"},
 		{RoleID: "role-president", MenuID: "menu-dept-edit"},
 		{RoleID: "role-president", MenuID: "menu-dept-delete"},
-		{RoleID: "role-president", MenuID: "menu-users"},
+		{RoleID: "role-president", MenuID: "menu-dept-export"},
+		{RoleID: "role-president", MenuID: "menu-role"},
+		{RoleID: "role-president", MenuID: "menu-role-add"},
+		{RoleID: "role-president", MenuID: "menu-role-edit"},
+		{RoleID: "role-president", MenuID: "menu-role-delete"},
+		{RoleID: "role-president", MenuID: "menu-role-assign"},
+		{RoleID: "role-president", MenuID: "menu-user"},
 		{RoleID: "role-president", MenuID: "menu-user-add"},
 		{RoleID: "role-president", MenuID: "menu-user-edit"},
 		{RoleID: "role-president", MenuID: "menu-user-delete"},
-		{RoleID: "role-president", MenuID: "menu-grade"},
-		{RoleID: "role-president", MenuID: "menu-menus"},
+		{RoleID: "role-president", MenuID: "menu-menu"},
+		{RoleID: "role-president", MenuID: "menu-menu-add"},
+		{RoleID: "role-president", MenuID: "menu-menu-edit"},
+		{RoleID: "role-president", MenuID: "menu-menu-delete"},
 		{RoleID: "role-president", MenuID: "menu-audit"},
+		{RoleID: "role-president", MenuID: "menu-exam"},
+		{RoleID: "role-president", MenuID: "menu-exam-upload"},
+		{RoleID: "role-president", MenuID: "menu-exam-batch"},
+		{RoleID: "role-president", MenuID: "menu-exam-delete"},
+		{RoleID: "role-president", MenuID: "menu-homework-approval"},
+		{RoleID: "role-president", MenuID: "menu-cycle"},
+		{RoleID: "role-president", MenuID: "menu-cycle-manage"},
+		{RoleID: "role-president", MenuID: "menu-model"},
+
+		{RoleID: "role-admin-office", MenuID: "menu-dashboard"},
+		{RoleID: "role-admin-office", MenuID: "menu-access"},
+		{RoleID: "role-admin-office", MenuID: "menu-dept"},
+		{RoleID: "role-admin-office", MenuID: "menu-dept-add"},
+		{RoleID: "role-admin-office", MenuID: "menu-dept-edit"},
+		{RoleID: "role-admin-office", MenuID: "menu-dept-export"},
+		{RoleID: "role-admin-office", MenuID: "menu-user"},
+		{RoleID: "role-admin-office", MenuID: "menu-user-add"},
+		{RoleID: "role-admin-office", MenuID: "menu-user-edit"},
+
+		{RoleID: "role-academic-director", MenuID: "menu-dashboard"},
+		{RoleID: "role-academic-director", MenuID: "menu-access"},
+		{RoleID: "role-academic-director", MenuID: "menu-dept"},
+		{RoleID: "role-academic-director", MenuID: "menu-user"},
+		{RoleID: "role-academic-director", MenuID: "menu-user-edit"},
+		{RoleID: "role-academic-director", MenuID: "menu-exam"},
+		{RoleID: "role-academic-director", MenuID: "menu-exam-upload"},
+		{RoleID: "role-academic-director", MenuID: "menu-exam-batch"},
+		{RoleID: "role-academic-director", MenuID: "menu-exam-delete"},
+		{RoleID: "role-academic-director", MenuID: "menu-homework-approval"},
+		{RoleID: "role-academic-director", MenuID: "menu-cycle"},
+		{RoleID: "role-academic-director", MenuID: "menu-cycle-manage"},
+
 		{RoleID: "role-dean", MenuID: "menu-dashboard"},
+		{RoleID: "role-dean", MenuID: "menu-access"},
 		{RoleID: "role-dean", MenuID: "menu-dept"},
-		{RoleID: "role-dean", MenuID: "menu-users"},
+		{RoleID: "role-dean", MenuID: "menu-user"},
+		{RoleID: "role-dean", MenuID: "menu-user-edit"},
+		{RoleID: "role-dean", MenuID: "menu-homework-approval"},
+
+		{RoleID: "role-major-lead", MenuID: "menu-dashboard"},
+		{RoleID: "role-major-lead", MenuID: "menu-access"},
+		{RoleID: "role-major-lead", MenuID: "menu-dept"},
+		{RoleID: "role-major-lead", MenuID: "menu-user"},
+		{RoleID: "role-major-lead", MenuID: "menu-user-edit"},
+		{RoleID: "role-major-lead", MenuID: "menu-exam"},
+		{RoleID: "role-major-lead", MenuID: "menu-homework-approval"},
+
 		{RoleID: "role-lecturer", MenuID: "menu-dashboard"},
-		{RoleID: "role-lecturer", MenuID: "menu-users"},
+		{RoleID: "role-lecturer", MenuID: "menu-exam"},
+		{RoleID: "role-lecturer", MenuID: "menu-homework-approval"},
+
+		{RoleID: "role-student", MenuID: "menu-dashboard"},
+		{RoleID: "role-student", MenuID: "menu-homework-approval"},
 	}
 	return db.CreateInBatches(roleMenus, 100).Error
-}
-
-func seedPositionCategories(db *gorm.DB) error {
-	categories := []model.PositionCategory{
-		{Code: "teaching", Name: "教学岗位", Color: "#FF6B6B", Icon: "BookOutlined", SortOrder: 1, Description: "负责教学工作的岗位"},
-		{Code: "research", Name: "科研岗位", Color: "#4ECDC4", Icon: "ExperimentOutlined", SortOrder: 2, Description: "负责科研工作的岗位"},
-		{Code: "admin", Name: "行政岗位", Color: "#45B7D1", Icon: "FileOutlined", SortOrder: 3, Description: "负责行政管理的岗位"},
-		{Code: "support", Name: "辅助岗位", Color: "#96CEB4", Icon: "TeamOutlined", SortOrder: 4, Description: "提供支持服务的岗位"},
-	}
-	return db.CreateInBatches(categories, 100).Error
-}
-
-func seedPositions(db *gorm.DB) error {
-	positions := []model.Position{
-		{ID: "pos-001", Name: "教授", Code: "PROF", CategoryCode: "teaching", Level: 4, Description: "大学教授职位", Headcount: 45},
-		{ID: "pos-002", Name: "副教授", Code: "ASSOC-PROF", CategoryCode: "teaching", Level: 3, Description: "大学副教授职位", Headcount: 78},
-		{ID: "pos-003", Name: "讲师", Code: "LECTURER", CategoryCode: "teaching", Level: 2, Description: "大学讲师职位", Headcount: 156},
-		{ID: "pos-006", Name: "院长", Code: "DEAN", CategoryCode: "admin", Level: 4, Description: "学院行政领导", Headcount: 12},
-	}
-	return db.CreateInBatches(positions, 100).Error
 }
 
 func seedGrades(db *gorm.DB) error {
@@ -257,15 +312,6 @@ func seedUserRoles(db *gorm.DB) error {
 	return db.CreateInBatches(userRoles, 100).Error
 }
 
-func seedUserPositions(db *gorm.DB) error {
-	userPositions := []model.UserPosition{
-		{UserID: "user-005", PositionID: "pos-006"},
-		{UserID: "user-006", PositionID: "pos-006"},
-		{UserID: "user-007", PositionID: "pos-002"},
-	}
-	return db.CreateInBatches(userPositions, 100).Error
-}
-
 func seedAuditLogs(db *gorm.DB) error {
 	logs := []model.AuditLog{
 		{ID: "audit-001", Action: "创建用户", Operator: "admin", Target: "user-001", Type: "success"},
@@ -277,4 +323,81 @@ func seedAuditLogs(db *gorm.DB) error {
 
 func stringPtr(s string) *string {
 	return &s
+}
+
+func makeDepartment(id, name, code string, parentID *string, level, leaderName, leaderTitle string, staffCount int) model.Department {
+	return model.Department{
+		ID:          id,
+		Name:        name,
+		Code:        code,
+		ParentID:    parentID,
+		Level:       level,
+		LeaderName:  leaderName,
+		LeaderTitle: leaderTitle,
+		StaffCount:  staffCount,
+		Status:      "operational",
+	}
+}
+
+func buildCollegeDepartments(id, name, code string) []model.Department {
+	proStageID := fmt.Sprintf("%s-pro-stage", id)
+	advStageID := fmt.Sprintf("%s-adv-stage", id)
+	departments := []model.Department{
+		makeDepartment(id, name, code, stringPtr("dept-root"), "college", "", "院长", 440),
+		makeDepartment(proStageID, "专业阶段", fmt.Sprintf("%s-PRO-STAGE", code), stringPtr(id), "stage", "", "专业主任", 200),
+		makeDepartment(advStageID, "专业高级阶段", fmt.Sprintf("%s-ADV-STAGE", code), stringPtr(id), "stage", "", "专高主任", 240),
+	}
+
+	departments = append(departments, makeProMajors(proStageID, code)...)
+	departments = append(departments, makeAdvMajors(advStageID, code)...)
+	return departments
+}
+
+func makeProMajors(stageID, collegeCode string) []model.Department {
+	numbers := []string{"一", "二", "三", "四", "五"}
+	departments := make([]model.Department, 0, 20)
+	for idx, number := range numbers {
+		majorID := fmt.Sprintf("%s-major-%d", stageID, idx+1)
+		majorCode := fmt.Sprintf("%s-PRO-%d", collegeCode, idx+1)
+		departments = append(departments, makeDepartment(majorID, fmt.Sprintf("专业%s", number), majorCode, stringPtr(stageID), "major", "", "专业负责人", 120))
+		departments = append(departments, makeClasses(majorID, fmt.Sprintf("专业%s", number), majorCode)...)
+	}
+	return departments
+}
+
+func makeAdvMajors(stageID, collegeCode string) []model.Department {
+	numbers := []string{"一", "二", "三", "四", "五", "六"}
+	departments := make([]model.Department, 0, 18)
+	for idx, number := range numbers {
+		majorID := fmt.Sprintf("%s-major-%d", stageID, idx+1)
+		majorCode := fmt.Sprintf("%s-ADV-%d", collegeCode, idx+1)
+		departments = append(departments, makeDepartment(majorID, fmt.Sprintf("专高%s", number), majorCode, stringPtr(stageID), "major", "", "专业负责人", 120))
+		departments = append(departments, makeClasses(majorID, fmt.Sprintf("专高%s", number), majorCode)...)
+	}
+	return departments
+}
+
+func makeClasses(majorID, majorName, majorCode string) []model.Department {
+	classMap := map[string][]string{
+		"专业一": {"2401A", "2402A", "2403A"},
+		"专业二": {"2310A", "2311A", "2312A"},
+		"专业三": {"2220A", "2221A", "2222A"},
+		"专业四": {"2130A", "2131A"},
+		"专业五": {"2040A", "2041A"},
+		"专高一": {"2401B", "2402B"},
+		"专高二": {"2310B", "2311B"},
+		"专高三": {"2220B", "2221B"},
+		"专高四": {"2130B", "2131B"},
+		"专高五": {"2040B", "2041B"},
+		"专高六": {"2405B", "2406B"},
+	}
+
+	classNames := classMap[majorName]
+	departments := make([]model.Department, 0, len(classNames))
+	for idx, className := range classNames {
+		classID := fmt.Sprintf("%s-%d", majorID, idx+1)
+		classCode := fmt.Sprintf("%s-%s", majorCode, className)
+		departments = append(departments, makeDepartment(classID, className, classCode, stringPtr(majorID), "class", "", "班主任", 35))
+	}
+	return departments
 }

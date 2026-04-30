@@ -1,4 +1,4 @@
-export type DataScope = 'school' | 'college' | 'major' | 'class';
+export type DataScope = 'school' | 'college' | 'major' | 'class' | 'personal';
 export type DepartmentStatus = 'operational';
 export type DepartmentLevel = 'university' | 'college' | 'stage' | 'major' | 'class';
 export type MenuItemType = 'menu' | 'button';
@@ -71,30 +71,6 @@ export interface UserRecord {
   updatedAt: string;
 }
 
-export interface PositionCategoryRecord {
-  id: string;
-  code: string;
-  name: string;
-  color: string;
-  icon: string;
-  sortOrder: number;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PositionRecord {
-  id: string;
-  name: string;
-  code: string;
-  category: string;
-  level: number;
-  description: string;
-  headcount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface GradeRecord {
   id: string;
   code: string;
@@ -148,8 +124,6 @@ export interface SeedData {
   menus: MenuRecord[];
   roles: RoleRecord[];
   users: UserRecord[];
-  positionCategories: PositionCategoryRecord[];
-  positions: PositionRecord[];
   grades: GradeRecord[];
   auditLogs: AuditLogRecord[];
 }

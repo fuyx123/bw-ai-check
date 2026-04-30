@@ -21,6 +21,14 @@ import {
 } from '@ant-design/icons';
 import { useAuthStore } from '../../stores/authStore';
 
+const dataScopeLabelMap: Record<string, string> = {
+  school: '学校',
+  college: '学院',
+  major: '专业',
+  class: '班级',
+  personal: '个人',
+};
+
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, logout, updateProfile, updatePassword } = useAuthStore();
@@ -188,7 +196,7 @@ const Header: React.FC = () => {
           </Form.Item>
           <div style={{ padding: 12, background: '#f5f7fa', borderRadius: 8, fontSize: 13, color: '#999' }}>
             <div>角色：{currentUser?.role}</div>
-            <div>数据范围：{currentUser?.dataScope}</div>
+            <div>数据范围：{currentUser ? (dataScopeLabelMap[currentUser.dataScope] ?? currentUser.dataScope) : ''}</div>
           </div>
         </Form>
       </Modal>

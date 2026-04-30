@@ -15,6 +15,23 @@ export interface PageData<T> {
   pageSize: number;
 }
 
+interface ErrorPayload {
+  code?: number;
+  message?: string;
+}
+
+export class ApiError extends Error {
+  status?: number;
+  code?: number;
+
+  constructor(message: string, options?: { status?: number; code?: number }) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = options?.status;
+    this.code = options?.code;
+  }
+}
+
 const TOKEN_STORAGE_KEY = 'bw-ai-check.token';
 const USER_STORAGE_KEY = 'bw-ai-check.current-user';
 const PERMISSIONS_STORAGE_KEY = 'bw-ai-check.permissions';
@@ -23,6 +40,22 @@ export const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeout: 10000,
 });
+
+function redirectToAccessDenied(message?: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  if (window.location.pathname === '/access-denied') {
+    return;
+  }
+
+  const params = new URLSearchParams();
+  params.set('from', window.location.pathname);
+  if (message) {
+    params.set('message', message);
+  }
+  window.location.replace(`/access-denied?${params.toString()}`);
+}
 
 http.interceptors.request.use((config) => {
   const token = getStoredToken();
@@ -35,17 +68,29 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (response) => {
     const payload = response.data as ApiResponse<unknown>;
+    if (payload?.code === 1002) {
+      redirectToAccessDenied(payload.message);
+    }
     if (typeof payload?.code === 'number' && payload.code !== 0) {
-      return Promise.reject(new Error(payload.message || '请求失败'));
+      return Promise.reject(new ApiError(payload.message || '请求失败', {
+        status: response.status,
+        code: payload.code,
+      }));
     }
     return response;
   },
-  (error: AxiosError<{ message?: string }>) => {
+  (error: AxiosError<ErrorPayload>) => {
+    if (error.response?.data?.code === 1002) {
+      redirectToAccessDenied(error.response.data.message);
+    }
     const message =
       error.response?.data?.message ||
       error.message ||
       '网络请求失败';
-    return Promise.reject(new Error(message));
+    return Promise.reject(new ApiError(message, {
+      status: error.response?.status,
+      code: error.response?.data?.code,
+    }));
   },
 );
 

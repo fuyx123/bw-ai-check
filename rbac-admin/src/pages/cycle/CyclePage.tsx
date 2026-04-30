@@ -11,15 +11,19 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
 import {
-  createCycle, deleteCycle, fetchCycleDetail, fetchCycles,
+  createCycle,
+  deleteCycle,
+  deleteCycleSessionGrader,
+  fetchCycleDetail,
+  fetchCycles,
+  fetchCycleSessionGraders,
+  fetchCycleStaff,
   importSchedule,
-  type ExamSession, type TeachingCycle,
-} from '../../services/cycle';
-import {
-  fetchSessionGraders, upsertSessionGrader, deleteSessionGrader,
   type ExamGrader,
-} from '../../services/exam';
-import { fetchUsers } from '../../services/users';
+  type ExamSession,
+  type TeachingCycle,
+  upsertCycleSessionGrader,
+} from '../../services/cycle';
 import message from '../../utils/message';
 
 const { Title, Text } = Typography;
@@ -50,7 +54,7 @@ const GraderPanel: React.FC<{ session: ExamSession }> = ({ session }) => {
   const loadGraders = async () => {
     setLoading(true);
     try {
-      setGraders(await fetchSessionGraders(session.id));
+      setGraders(await fetchCycleSessionGraders(session.id));
     } finally {
       setLoading(false);
     }
@@ -59,8 +63,8 @@ const GraderPanel: React.FC<{ session: ExamSession }> = ({ session }) => {
   const loadStaff = async () => {
     setStaffLoading(true);
     try {
-      const res = await fetchUsers(1, 200, { userType: 'staff' });
-      setStaffOptions(res.items.map((u) => ({ value: u.id, label: `${u.name}（${u.loginId ?? u.email ?? ''}）` })));
+      const staff = await fetchCycleStaff();
+      setStaffOptions(staff.map((u) => ({ value: u.id, label: `${u.name}（${u.loginId || u.email || ''}）` })));
     } finally {
       setStaffLoading(false);
     }
@@ -80,7 +84,7 @@ const GraderPanel: React.FC<{ session: ExamSession }> = ({ session }) => {
     const className = classOptions.find((o) => o.value === selectedClass)?.label ?? selectedClassName;
     setSaving(true);
     try {
-      await upsertSessionGrader(session.id, {
+      await upsertCycleSessionGrader(session.id, {
         classId: selectedClass,
         className,
         graderId: selectedGrader,
@@ -99,7 +103,7 @@ const GraderPanel: React.FC<{ session: ExamSession }> = ({ session }) => {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteSessionGrader(id);
+      await deleteCycleSessionGrader(id);
       message.success('已删除');
       loadGraders();
     } catch {
@@ -309,7 +313,10 @@ const CyclePage: React.FC = () => {
         </Space>
       ),
     },
-    { title: '考试日期', dataIndex: 'examDate', key: 'examDate', width: 110 },
+    {
+      title: '考试日期', dataIndex: 'examDate', key: 'examDate', width: 120,
+      render: (v: string) => <span style={{ whiteSpace: 'nowrap' }}>{v}</span>,
+    },
     {
       title: '覆盖单元', dataIndex: 'unitRange', key: 'unitRange', width: 120,
       render: (v) => v || '-',
@@ -332,14 +339,20 @@ const CyclePage: React.FC = () => {
         </Button>
       ),
     },
-    { title: '开始日期', dataIndex: 'startDate', key: 'startDate', width: 110 },
-    { title: '结束日期', dataIndex: 'endDate', key: 'endDate', width: 110 },
     {
-      title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 175,
-      render: (v) => dayjs(v).format('YYYY-MM-DD HH:mm'),
+      title: '开始日期', dataIndex: 'startDate', key: 'startDate', width: 120,
+      render: (v: string) => <span style={{ whiteSpace: 'nowrap' }}>{v}</span>,
     },
     {
-      title: '操作', key: 'actions', width: 200,
+      title: '结束日期', dataIndex: 'endDate', key: 'endDate', width: 120,
+      render: (v: string) => <span style={{ whiteSpace: 'nowrap' }}>{v}</span>,
+    },
+    {
+      title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 160,
+      render: (v: string) => <span style={{ whiteSpace: 'nowrap' }}>{dayjs(v).format('YYYY-MM-DD HH:mm')}</span>,
+    },
+    {
+      title: '操作', key: 'actions', width: 160,
       render: (_, r) => (
         <Space>
           <Button size="small" icon={<UploadOutlined />} onClick={() => handleOpenImport(r)}>
@@ -379,6 +392,7 @@ const CyclePage: React.FC = () => {
           dataSource={cycles}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 'max-content' }}
           pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }}
         />
       </Card>
@@ -463,6 +477,7 @@ const CyclePage: React.FC = () => {
               rowKey="id"
               size="small"
               pagination={false}
+              scroll={{ x: 'max-content' }}
               expandable={{
                 expandedRowKeys: Array.from(expandedSessions),
                 expandedRowRender: (record) => <GraderPanel session={record} />,

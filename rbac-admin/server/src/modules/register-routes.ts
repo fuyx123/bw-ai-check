@@ -59,9 +59,15 @@ export function registerRoutes(router: Router<AppContext>): void {
     method: 'GET',
     path: '/api/auth/me',
     auth: true,
-    handler: (context) => ({
-      data: withUser(context),
-    }),
+    handler: (context) => {
+      const user = withUser(context);
+      return {
+        data: {
+          user,
+          permissions: user.permissions,
+        },
+      };
+    },
   });
 
   router.register({
@@ -458,146 +464,6 @@ export function registerRoutes(router: Router<AppContext>): void {
 
   router.register({
     method: 'GET',
-    path: '/api/position-categories',
-    auth: true,
-    permission: 'menu-position',
-    handler: (context) => ({
-      data: context.app.services.positionService.listCategories(),
-    }),
-  });
-
-  router.register({
-    method: 'POST',
-    path: '/api/position-categories',
-    auth: true,
-    permission: 'menu-pos-add',
-    handler: (context) => {
-      const body = asObject(context.body);
-      const category = context.app.services.positionService.createCategory(withUser(context), {
-        code: getString(body, 'code', { required: true })!,
-        name: getString(body, 'name', { required: true })!,
-        color: getString(body, 'color', { required: true })!,
-        icon: getString(body, 'icon', { required: true })!,
-        sortOrder: getNumber(body, 'sortOrder', { required: true, min: 0 })!,
-        description: getString(body, 'description', { required: true })!,
-      });
-
-      return {
-        statusCode: 201,
-        message: '岗位分类创建成功',
-        data: category,
-      };
-    },
-  });
-
-  router.register({
-    method: 'PUT',
-    path: '/api/position-categories/:id',
-    auth: true,
-    permission: 'menu-pos-edit',
-    handler: (context) => {
-      const body = asObject(context.body);
-      const category = context.app.services.positionService.updateCategory(withUser(context), context.params.id, {
-        code: getString(body, 'code'),
-        name: getString(body, 'name'),
-        color: getString(body, 'color'),
-        icon: getString(body, 'icon'),
-        sortOrder: getNumber(body, 'sortOrder', { min: 0 }),
-        description: getString(body, 'description'),
-      });
-
-      return {
-        message: '岗位分类更新成功',
-        data: category,
-      };
-    },
-  });
-
-  router.register({
-    method: 'DELETE',
-    path: '/api/position-categories/:id',
-    auth: true,
-    permission: 'menu-pos-delete',
-    handler: (context) => {
-      context.app.services.positionService.deleteCategory(withUser(context), context.params.id);
-      return {
-        message: '岗位分类删除成功',
-      };
-    },
-  });
-
-  router.register({
-    method: 'GET',
-    path: '/api/positions',
-    auth: true,
-    permission: 'menu-position',
-    handler: (context) => ({
-      data: context.app.services.positionService.listPositions(context.query),
-    }),
-  });
-
-  router.register({
-    method: 'POST',
-    path: '/api/positions',
-    auth: true,
-    permission: 'menu-pos-add',
-    handler: (context) => {
-      const body = asObject(context.body);
-      const position = context.app.services.positionService.createPosition(withUser(context), {
-        name: getString(body, 'name', { required: true })!,
-        code: getString(body, 'code', { required: true })!,
-        category: getString(body, 'category', { required: true })!,
-        level: getNumber(body, 'level', { required: true, min: 1 })!,
-        description: getString(body, 'description', { required: true })!,
-        headcount: getNumber(body, 'headcount', { required: true, min: 0 })!,
-      });
-
-      return {
-        statusCode: 201,
-        message: '职位创建成功',
-        data: position,
-      };
-    },
-  });
-
-  router.register({
-    method: 'PUT',
-    path: '/api/positions/:id',
-    auth: true,
-    permission: 'menu-pos-edit',
-    handler: (context) => {
-      const body = asObject(context.body);
-      const position = context.app.services.positionService.updatePosition(withUser(context), context.params.id, {
-        name: getString(body, 'name'),
-        code: getString(body, 'code'),
-        category: getString(body, 'category'),
-        level: getNumber(body, 'level', { min: 1 }),
-        description: getString(body, 'description'),
-        headcount: getNumber(body, 'headcount', { min: 0 }),
-      });
-
-      return {
-        message: '职位更新成功',
-        data: position,
-      };
-    },
-  });
-
-  router.register({
-    method: 'DELETE',
-    path: '/api/positions/:id',
-    auth: true,
-    permission: 'menu-pos-delete',
-    handler: (context) => {
-      context.app.services.positionService.deletePosition(withUser(context), context.params.id);
-      return {
-        message: '职位删除成功',
-      };
-    },
-  });
-
-  router.register({
-    method: 'GET',
     path: '/api/grades',
     auth: true,
     permission: 'menu-grade',
@@ -633,9 +499,19 @@ export function registerRoutes(router: Router<AppContext>): void {
 
   router.register({
     method: 'GET',
+    path: '/api/audit/logs',
+    auth: true,
+    permission: 'menu-audit',
+    handler: (context) => ({
+      data: context.app.services.auditService.list(context.query),
+    }),
+  });
+
+  router.register({
+    method: 'GET',
     path: '/api/audit-logs',
     auth: true,
-    permission: 'menu-role',
+    permission: 'menu-audit',
     handler: (context) => ({
       data: context.app.services.auditService.list(context.query),
     }),

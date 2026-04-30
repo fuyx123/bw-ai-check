@@ -19,14 +19,19 @@ import {
   batchUploadAnswerFiles,
   deleteAnswerFile,
   fetchAnswerFiles,
+  fetchExamCycleDetail,
+  fetchExamCycles,
+  fetchExamTrendReport,
   uploadAnswerFile,
   type AnswerFile,
+  type ExamTrendReport,
 } from '../../services/exam';
-import { fetchCycles, fetchCycleDetail, type ExamSession, type TeachingCycle } from '../../services/cycle';
+import { type ExamSession, type TeachingCycle } from '../../services/cycle';
 import { useAuthStore } from '../../stores/authStore';
 import { useDepartmentStore } from '../../stores/departmentStore';
 import type { Department } from '../../types/rbac';
 import message from '../../utils/message';
+import ExamTrendPanel from './components/ExamTrendPanel';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -121,6 +126,8 @@ const ExamPage: React.FC = () => {
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
   const [cycleDetail, setCycleDetail] = useState<TeachingCycle | null>(null);
   const [cycleLoading, setCycleLoading] = useState(false);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [trendReport, setTrendReport] = useState<ExamTrendReport | null>(null);
 
   // 班级筛选（仅高权限教职工可见）
   const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
@@ -163,7 +170,7 @@ const ExamPage: React.FC = () => {
 
   // ===== 初始化 =====
   useEffect(() => {
-    fetchCycles()
+    fetchExamCycles()
       .then((list) => {
         setCycles(list);
         if (list.length > 0) setSelectedCycleId(list[0].id);
@@ -179,11 +186,23 @@ const ExamPage: React.FC = () => {
   useEffect(() => {
     if (!selectedCycleId) { setCycleDetail(null); return; }
     setCycleLoading(true);
-    fetchCycleDetail(selectedCycleId, selectedClassId)
+    fetchExamCycleDetail(selectedCycleId, selectedClassId)
       .then(setCycleDetail)
       .catch(() => message.error('加载考次失败'))
       .finally(() => setCycleLoading(false));
   }, [selectedCycleId, selectedClassId]);
+
+  useEffect(() => {
+    if (!selectedCycleId || isStudent) {
+      setTrendReport(null);
+      return;
+    }
+    setTrendLoading(true);
+    fetchExamTrendReport({ cycleId: selectedCycleId, classId: selectedClassId })
+      .then(setTrendReport)
+      .catch(() => message.error('加载学生趋势失败'))
+      .finally(() => setTrendLoading(false));
+  }, [isStudent, selectedCycleId, selectedClassId]);
 
   // ===== 学生：周期变化时加载自己的提交记录 =====
   useEffect(() => {
@@ -300,7 +319,7 @@ const ExamPage: React.FC = () => {
       message.success('文件上传成功');
       onSuccess?.({});
       setUploadPercent(null);
-      if (selectedCycleId) fetchCycleDetail(selectedCycleId, selectedClassId).then(setCycleDetail).catch(() => {});
+      if (selectedCycleId) fetchExamCycleDetail(selectedCycleId, selectedClassId).then(setCycleDetail).catch(() => {});
       refreshMyFiles();
     } catch (err: unknown) {
       const aborted = err instanceof Error && err.name === 'CanceledError';
@@ -332,7 +351,7 @@ const ExamPage: React.FC = () => {
       message.success(`批量上传成功，共 ${result.count} 个文件`);
       onSuccess?.({});
       setBatchPercent(null);
-      if (selectedCycleId) fetchCycleDetail(selectedCycleId, selectedClassId).then(setCycleDetail).catch(() => {});
+      if (selectedCycleId) fetchExamCycleDetail(selectedCycleId, selectedClassId).then(setCycleDetail).catch(() => {});
     } catch (err: unknown) {
       const aborted = err instanceof Error && err.name === 'CanceledError';
       if (!aborted) {
@@ -349,7 +368,7 @@ const ExamPage: React.FC = () => {
       await deleteAnswerFile(id);
       message.success('删除成功');
       if (drawerSession) loadDrawerFiles(drawerSession, drawerPage);
-      if (selectedCycleId) fetchCycleDetail(selectedCycleId, selectedClassId).then(setCycleDetail).catch(() => {});
+      if (selectedCycleId) fetchExamCycleDetail(selectedCycleId, selectedClassId).then(setCycleDetail).catch(() => {});
       refreshMyFiles();
     } catch {
       message.error('删除失败');
@@ -601,7 +620,7 @@ const ExamPage: React.FC = () => {
     {
       title: '上传时间',
       dataIndex: 'createdAt',
-      width: 130,
+      width: 155,
       render: (v: string) => (
         <Text style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{dayjs(v).format('YYYY-MM-DD HH:mm')}</Text>
       ),
@@ -640,7 +659,10 @@ const ExamPage: React.FC = () => {
           </Button>
         ),
       },
-      { title: '考试日期', dataIndex: 'examDate', key: 'examDate', width: 110 },
+      {
+        title: '考试日期', dataIndex: 'examDate', key: 'examDate', width: 120,
+        render: (v: string) => <span style={{ whiteSpace: 'nowrap' }}>{v}</span>,
+      },
       {
         title: '覆盖单元', dataIndex: 'unitRange', key: 'unitRange', width: 120,
         render: (v) => v || '-',
@@ -655,7 +677,7 @@ const ExamPage: React.FC = () => {
         ),
       },
       {
-        title: '操作', key: 'action', width: 80,
+        title: '操作', key: 'action', width: 90,
         render: (_, r) => (
           <Button size="small" onClick={() => openSessionDrawer(r)}>查看文件</Button>
         ),
@@ -668,6 +690,7 @@ const ExamPage: React.FC = () => {
         rowKey="id"
         size="small"
         pagination={false}
+        scroll={{ x: 'max-content' }}
       />
     );
   };
@@ -721,10 +744,15 @@ const ExamPage: React.FC = () => {
               onClick={() => {
                 if (selectedCycleId) {
                   setCycleLoading(true);
-                  fetchCycleDetail(selectedCycleId, selectedClassId)
+                  setTrendLoading(true);
+                  fetchExamCycleDetail(selectedCycleId, selectedClassId)
                     .then(setCycleDetail)
                     .catch(() => message.error('刷新失败'))
                     .finally(() => setCycleLoading(false));
+                  fetchExamTrendReport({ cycleId: selectedCycleId, classId: selectedClassId })
+                    .then(setTrendReport)
+                    .catch(() => message.error('刷新趋势失败'))
+                    .finally(() => setTrendLoading(false));
                 }
                 refreshMyFiles();
               }}
@@ -833,25 +861,28 @@ const ExamPage: React.FC = () => {
       ) : isStudent ? (
         renderMySubmissionCards()
       ) : (
-        <Card
-          title="考次提交统计"
-          size="small"
-          loading={cycleLoading}
-        >
-          <Tabs
-            type="card"
-            items={TYPE_TABS.map(({ key, label, color }) => ({
-              key,
-              label: (
-                <Space>
-                  <Tag color={color} style={{ margin: 0 }}>{label}</Tag>
-                  <span>{allSessions.filter((s) => s.type === key).length} 场</span>
-                </Space>
-              ),
-              children: renderSessionTable(key),
-            }))}
-          />
-        </Card>
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Card
+            title="考次提交统计"
+            size="small"
+            loading={cycleLoading}
+          >
+            <Tabs
+              type="card"
+              items={TYPE_TABS.map(({ key, label, color }) => ({
+                key,
+                label: (
+                  <Space>
+                    <Tag color={color} style={{ margin: 0 }}>{label}</Tag>
+                    <span>{allSessions.filter((s) => s.type === key).length} 场</span>
+                  </Space>
+                ),
+                children: renderSessionTable(key),
+              }))}
+            />
+          </Card>
+          <ExamTrendPanel report={trendReport} loading={trendLoading} />
+        </Space>
       )}
 
       {/* 考次文件列表抽屉（教职工用） */}
@@ -905,6 +936,7 @@ const ExamPage: React.FC = () => {
           rowKey="id"
           loading={drawerLoading}
           size="small"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: drawerPage,
             pageSize: 20,

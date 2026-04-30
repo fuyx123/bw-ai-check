@@ -4,6 +4,7 @@ package dashscope
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -126,12 +127,17 @@ func (r *ChatResponse) ReplyText() string {
 
 // doChat 统一发送 /chat/completions 请求
 func (c *Client) doChat(payload any) (*ChatResponse, error) {
+	return c.doChatWithContext(context.Background(), payload)
+}
+
+// doChatWithContext 使用指定上下文发送 /chat/completions 请求。
+func (c *Client) doChatWithContext(ctx context.Context, payload any) (*ChatResponse, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +203,15 @@ func (c *Client) ChatWithFile(model, fileID, prompt string, forceJSON bool) (*Ch
 // ChatWithText 发送纯文本消息给任意 OpenAI 兼容模型（不依赖文件上传，兼容 Claude/GPT 等所有模型）。
 // forceJSON 为 true 时设置 response_format=json_object（部分模型不支持时会忽略）。
 func (c *Client) ChatWithText(model, systemPrompt, userPrompt string, forceJSON bool) (*ChatResponse, error) {
+	return c.ChatWithTextContext(context.Background(), model, systemPrompt, userPrompt, forceJSON)
+}
+
+// ChatWithTextContext 使用上下文发送纯文本消息，便于调用方控制单次超时。
+func (c *Client) ChatWithTextContext(
+	ctx context.Context,
+	model, systemPrompt, userPrompt string,
+	forceJSON bool,
+) (*ChatResponse, error) {
 	payload := textChatRequest{
 		Model: model,
 		Messages: []textMessage{
@@ -207,16 +222,16 @@ func (c *Client) ChatWithText(model, systemPrompt, userPrompt string, forceJSON 
 	if forceJSON {
 		payload.ResponseFormat = &responseFormat{Type: "json_object"}
 	}
-	return c.doChat(payload)
+	return c.doChatWithContext(ctx, payload)
 }
 
 // ---------- 视觉模型：qwen-vl-max + base64 图片 ----------
 
 // visionContentItem 多模态消息的内容项（文字或图片）
 type visionContentItem struct {
-	Type     string            `json:"type"`
-	Text     string            `json:"text,omitempty"`
-	ImageURL *visionImageURL   `json:"image_url,omitempty"`
+	Type     string          `json:"type"`
+	Text     string          `json:"text,omitempty"`
+	ImageURL *visionImageURL `json:"image_url,omitempty"`
 }
 
 type visionImageURL struct {

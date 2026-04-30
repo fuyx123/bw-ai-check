@@ -43,6 +43,10 @@ func PrepareDatabase(db *gorm.DB, logger *zap.Logger) error {
 		return err
 	}
 
+	if err := ensureHomeworkTables(db, logger); err != nil {
+		return err
+	}
+
 	if err := syncLegacyUserCredentials(db, logger); err != nil {
 		return err
 	}
@@ -243,13 +247,6 @@ func ensureAIModelTable(db *gorm.DB, logger *zap.Logger) error {
 		VALUES ('menu-model', NULL, '模型管理', '/models', 'ApiOutlined', 10, 1, 'menu', NOW(), NOW())
 	`)
 
-	// 为所有已存在角色分配该菜单权限（幂等）
-	var roleIDs []string
-	db.Table("roles").Pluck("id", &roleIDs)
-	for _, rid := range roleIDs {
-		db.Exec(`INSERT IGNORE INTO role_menus (role_id, menu_id) VALUES (?, 'menu-model')`, rid)
-	}
-
 	logger.Info("AI model table and menu ready")
 	return nil
 }
@@ -260,6 +257,26 @@ func ensureExamGraderTable(db *gorm.DB, logger *zap.Logger) error {
 		return fmt.Errorf("failed to migrate exam_graders: %w", err)
 	}
 	logger.Info("exam_graders table ready")
+	return nil
+}
+
+func ensureHomeworkTables(db *gorm.DB, logger *zap.Logger) error {
+	if err := db.AutoMigrate(&model.HomeworkTask{}, &model.HomeworkTaskClass{}, &model.HomeworkSubmission{}); err != nil {
+		return fmt.Errorf("failed to migrate homework tables: %w", err)
+	}
+
+	db.Exec(`
+		INSERT IGNORE INTO menus (id, parent_id, name, path, icon, sort_order, visible, type, created_at, updated_at)
+		VALUES
+			('menu-homework-approval', NULL, '作业审批', '/homework', 'BookOutlined', 7, 1, 'menu', NOW(), NOW())
+	`)
+
+	rootRoles := []string{"role-president", "role-academic-director", "role-dean", "role-major-lead", "role-lecturer", "role-student"}
+	for _, roleID := range rootRoles {
+		db.Exec(`INSERT IGNORE INTO role_menus (role_id, menu_id) VALUES (?, 'menu-homework-approval')`, roleID)
+	}
+
+	logger.Info("homework tables and menus ready")
 	return nil
 }
 

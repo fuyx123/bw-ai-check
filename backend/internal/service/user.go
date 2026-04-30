@@ -28,6 +28,42 @@ func NewUserService(db *gorm.DB, userRepo *repository.UserRepository, logger *za
 	}
 }
 
+func normalizeRoleIDs(userType string, roleIDs []string) []string {
+	if userType == "student" {
+		return []string{"role-student"}
+	}
+
+	result := make([]string, 0, len(roleIDs))
+	seen := make(map[string]struct{}, len(roleIDs))
+	for _, roleID := range roleIDs {
+		roleID = strings.TrimSpace(roleID)
+		if roleID == "" {
+			continue
+		}
+		if _, exists := seen[roleID]; exists {
+			continue
+		}
+		seen[roleID] = struct{}{}
+		result = append(result, roleID)
+	}
+	return result
+}
+
+func resolveUserDepartmentID(userType string, departmentID string, classID *string) (string, error) {
+	departmentID = strings.TrimSpace(departmentID)
+	if userType != "student" {
+		if departmentID == "" {
+			return "", fmt.Errorf("department id is required")
+		}
+		return departmentID, nil
+	}
+
+	if classID == nil || strings.TrimSpace(*classID) == "" {
+		return "", fmt.Errorf("student class is required")
+	}
+	return strings.TrimSpace(*classID), nil
+}
+
 func (s *UserService) List(access AccessContext, filter dto.UserFilter, page, pageSize int) ([]model.User, int64, int64, error) {
 	page, pageSize = normalizePage(page, pageSize)
 
@@ -52,7 +88,9 @@ func (s *UserService) List(access AccessContext, filter dto.UserFilter, page, pa
 	if filter.RoleID != "" {
 		query = query.Joins("JOIN user_roles ur ON ur.user_id = users.id AND ur.role_id = ?", filter.RoleID)
 	}
-	if accessibleDeptIDs != nil {
+	if access.DataScope == "personal" {
+		query = query.Where("users.id = ?", access.UserID)
+	} else if accessibleDeptIDs != nil {
 		query = query.Where("users.department_id IN ?", idsFromSet(accessibleDeptIDs))
 	}
 
@@ -94,7 +132,10 @@ func (s *UserService) GetDetail(access AccessContext, id string) (*model.User, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve accessible departments: %w", err)
 	}
-	if !departmentAccessible(accessibleDeptIDs, user.DepartmentID) {
+	if access.DataScope == "personal" && user.ID != access.UserID {
+		return nil, fmt.Errorf("user is outside current data scope")
+	}
+	if access.DataScope != "personal" && !departmentAccessible(accessibleDeptIDs, user.DepartmentID) {
 		return nil, fmt.Errorf("user is outside current data scope")
 	}
 
@@ -106,11 +147,21 @@ func (s *UserService) GetDetail(access AccessContext, id string) (*model.User, e
 }
 
 func (s *UserService) Create(access AccessContext, req dto.CreateUserReq) (*model.User, error) {
+	departmentID, err := resolveUserDepartmentID(req.UserType, req.DepartmentID, req.ClassID)
+	if err != nil {
+		return nil, err
+	}
+
+	roleIDs := normalizeRoleIDs(req.UserType, req.RoleIds)
+	if req.UserType == "staff" && len(roleIDs) == 0 {
+		return nil, fmt.Errorf("at least one role is required")
+	}
+
 	accessibleDeptIDs, err := resolveAccessibleDepartmentIDs(s.db, access)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve accessible departments: %w", err)
 	}
-	if !departmentAccessible(accessibleDeptIDs, req.DepartmentID) {
+	if !departmentAccessible(accessibleDeptIDs, departmentID) {
 		return nil, fmt.Errorf("target department is outside current data scope")
 	}
 
@@ -138,7 +189,7 @@ func (s *UserService) Create(access AccessContext, req dto.CreateUserReq) (*mode
 		Avatar:       req.Avatar,
 		Initials:     buildInitials(req.Name),
 		UserType:     req.UserType,
-		DepartmentID: req.DepartmentID,
+		DepartmentID: departmentID,
 		AccessStatus: req.AccessStatus,
 		IsActive:     req.IsActive,
 		Grade:        req.Grade,
@@ -150,7 +201,7 @@ func (s *UserService) Create(access AccessContext, req dto.CreateUserReq) (*mode
 		if err := tx.Create(&user).Error; err != nil {
 			return err
 		}
-		for _, roleID := range req.RoleIds {
+		for _, roleID := range roleIDs {
 			if err := tx.Create(&model.UserRole{UserID: user.ID, RoleID: roleID}).Error; err != nil {
 				return err
 			}
@@ -184,6 +235,12 @@ func (s *UserService) Update(access AccessContext, id string, req dto.UpdateUser
 	if req.DepartmentID != nil {
 		targetDeptID = *req.DepartmentID
 	}
+	if existing.UserType == "student" {
+		targetDeptID, err = resolveUserDepartmentID(existing.UserType, targetDeptID, coalesceClassID(req.ClassID, existing.ClassID))
+		if err != nil {
+			return nil, err
+		}
+	}
 	if !departmentAccessible(accessibleDeptIDs, targetDeptID) {
 		return nil, fmt.Errorf("target department is outside current data scope")
 	}
@@ -198,6 +255,9 @@ func (s *UserService) Update(access AccessContext, id string, req dto.UpdateUser
 	}
 	if req.DepartmentID != nil {
 		updates["department_id"] = *req.DepartmentID
+	}
+	if existing.UserType == "student" {
+		updates["department_id"] = targetDeptID
 	}
 	if req.AccessStatus != nil {
 		updates["access_status"] = *req.AccessStatus
@@ -225,13 +285,21 @@ func (s *UserService) Update(access AccessContext, id string, req dto.UpdateUser
 			}
 		}
 		if req.RoleIds != nil {
+			roleIDs := normalizeRoleIDs(existing.UserType, *req.RoleIds)
 			if err := tx.Where("user_id = ?", id).Delete(&model.UserRole{}).Error; err != nil {
 				return err
 			}
-			for _, roleID := range *req.RoleIds {
+			for _, roleID := range roleIDs {
 				if err := tx.Create(&model.UserRole{UserID: id, RoleID: roleID}).Error; err != nil {
 					return err
 				}
+			}
+		} else if existing.UserType == "student" {
+			if err := tx.Where("user_id = ?", id).Delete(&model.UserRole{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Create(&model.UserRole{UserID: id, RoleID: "role-student"}).Error; err != nil {
+				return err
 			}
 		}
 		return tx.Create(&model.AuditLog{
@@ -247,6 +315,13 @@ func (s *UserService) Update(access AccessContext, id string, req dto.UpdateUser
 	}
 
 	return s.GetDetail(access, id)
+}
+
+func coalesceClassID(next *string, current *string) *string {
+	if next != nil && strings.TrimSpace(*next) != "" {
+		return next
+	}
+	return current
 }
 
 // ResetPassword 重置用户密码
@@ -303,9 +378,6 @@ func (s *UserService) Delete(access AccessContext, id string) error {
 
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("user_id = ?", id).Delete(&model.UserRole{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("user_id = ?", id).Delete(&model.UserPosition{}).Error; err != nil {
 			return err
 		}
 		if err := tx.Where("id = ?", id).Delete(&model.User{}).Error; err != nil {

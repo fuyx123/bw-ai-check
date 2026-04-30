@@ -1,72 +1,95 @@
 import type { Role } from '../../types/rbac';
 import { getAllMenuIds } from './menus';
 
-/**
- * 角色设计：
- * - 校长：全部权限，数据范围 school
- * - 专业主任：管理所在学院专业阶段（专业一~专业五），数据范围 major
- * - 专高主任：管理所在学院专业高级阶段（专高一~专高六），数据范围 major
- * - 教务：可查看全校成绩，数据范围 school（成绩只读）
- * - 讲师：负责所在班级的教学，仅可查看本班成绩，数据范围 class
- * - 学生：仅工作台/成绩查看，数据范围 class（由 userType='student' 单独处理）
- */
 export const roles: Role[] = [
   {
     id: 'role-president',
     name: '校长',
-    description: '学校最高行政负责人，拥有全部权限，可查看所有学院数据',
+    description: '学校最高行政负责人，拥有平台全部权限',
     permissions: getAllMenuIds(),
     dataScope: 'school',
     userCount: 1,
   },
   {
-    id: 'role-pro-director',
-    name: '专业主任',
-    description: '负责所在学院专业阶段（专业一~专业五）的教学管理工作',
+    id: 'role-admin-office',
+    name: '行政办公室',
+    description: '负责日常行政管理、组织架构维护和人员信息维护',
     permissions: [
       'menu-dashboard',
-      'menu-dept', 'menu-dept-edit',
+      'menu-access',
+      'menu-dept', 'menu-dept-add', 'menu-dept-edit', 'menu-dept-export',
       'menu-user', 'menu-user-add', 'menu-user-edit',
-      'menu-grade',
-    ],
-    dataScope: 'major',
-    userCount: 6,
-  },
-  {
-    id: 'role-adv-director',
-    name: '专高主任',
-    description: '负责所在学院专业高级阶段（专高一~专高六）的教学管理工作',
-    permissions: [
-      'menu-dashboard',
-      'menu-dept', 'menu-dept-edit',
-      'menu-user', 'menu-user-add', 'menu-user-edit',
-      'menu-grade',
-    ],
-    dataScope: 'major',
-    userCount: 6,
-  },
-  {
-    id: 'role-academic-affairs',
-    name: '教务',
-    description: '教务部门人员，负责全校学生成绩管理，拥有所有学院成绩的查看权限',
-    permissions: [
-      'menu-dashboard',
-      'menu-grade',
-      'menu-user',
     ],
     dataScope: 'school',
-    userCount: 8,
+    userCount: 2,
+  },
+  {
+    id: 'role-academic-director',
+    name: '教务处长',
+    description: '负责教学运行、阅卷流程与教学周期管理',
+    permissions: [
+      'menu-dashboard',
+      'menu-access',
+      'menu-dept',
+      'menu-user', 'menu-user-edit',
+      'menu-exam', 'menu-exam-upload', 'menu-exam-batch', 'menu-exam-delete',
+      'menu-homework-approval',
+      'menu-cycle', 'menu-cycle-manage',
+    ],
+    dataScope: 'school',
+    userCount: 1,
+  },
+  {
+    id: 'role-dean',
+    name: '院长',
+    description: '负责本学院部门与人员管理',
+    permissions: [
+      'menu-dashboard',
+      'menu-access',
+      'menu-dept',
+      'menu-user', 'menu-user-edit',
+      'menu-homework-approval',
+    ],
+    dataScope: 'college',
+    userCount: 4,
+  },
+  {
+    id: 'role-major-lead',
+    name: '专业负责人',
+    description: '负责本专业教学班级和人员管理',
+    permissions: [
+      'menu-dashboard',
+      'menu-access',
+      'menu-dept',
+      'menu-user', 'menu-user-edit',
+      'menu-exam',
+      'menu-homework-approval',
+    ],
+    dataScope: 'major',
+    userCount: 3,
   },
   {
     id: 'role-lecturer',
     name: '讲师',
-    description: '各班级专属讲师，负责本班教学工作，仅可查看本班学生成绩',
+    description: '负责本班教学与阅卷处理',
     permissions: [
       'menu-dashboard',
-      'menu-grade',
+      'menu-exam',
+      'menu-homework-approval',
     ],
     dataScope: 'class',
-    userCount: 66,
+    userCount: 3,
+  },
+  {
+    id: 'role-student',
+    name: '学生',
+    description: '学生账号，仅保留个人基础访问能力',
+    permissions: [
+      'menu-dashboard',
+      'menu-homework-approval',
+    ],
+    dataScope: 'personal',
+    userCount: 7,
   },
 ];
 

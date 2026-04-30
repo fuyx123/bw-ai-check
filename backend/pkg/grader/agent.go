@@ -18,7 +18,7 @@ type QuestionResult struct {
 	Title            string   `json:"title"`
 	MaxScore         int      `json:"maxScore"`
 	CorrectRate      int      `json:"correctRate"`      // 0-100
-	Score            int      `json:"score"`            // 0 或 maxScore（>60% 得满分）
+	Score            int      `json:"score"`            // 0 或 maxScore（>80% 得满分）
 	ErrorPoints      []string `json:"errorPoints"`      // 错误点列表
 	CorrectApproach  string   `json:"correctApproach"`  // 正确实现思路
 	AnswerCompletion string   `json:"answerCompletion"` // 完整正确答案
@@ -85,6 +85,15 @@ func (a *Agent) gradeMultimodal(doc *docparser.DocContent) (*GradingResult, erro
 		return nil, fmt.Errorf("过滤页眉后文档内容为空")
 	}
 
+	// 统计文档中的图片数量，并预先检测逐题截图情况
+	imageCount := 0
+	for _, b := range trimmed {
+		if b.Type == docparser.BlockImage {
+			imageCount++
+		}
+	}
+	screenshotMap := detectQuestionScreenshots(trimmed)
+
 	blocks := make([]dashscope.MultimodalBlock, 0, len(trimmed))
 	for _, b := range trimmed {
 		switch b.Type {
@@ -112,7 +121,64 @@ func (a *Agent) gradeMultimodal(doc *docparser.DocContent) (*GradingResult, erro
 		return nil, fmt.Errorf("多模态模型调用失败: %w", lastErr)
 	}
 
-	return ParseResult(resp.ReplyText())
+	result, err := ParseResult(resp.ReplyText())
+	if err != nil {
+		return nil, err
+	}
+
+	if imageCount == 0 {
+		// 全局兜底：docparser 提取到 0 张图（空卷或格式不支持）→ 全部强制 0
+		for i := range result.Questions {
+			result.Questions[i].Score       = 0
+			result.Questions[i].CorrectRate = 0
+			result.Questions[i].ErrorPoints = []string{"未提供代码截图，属于空题"}
+		}
+		result.TotalScore = 0
+	} else {
+		// 逐题覆盖：有图的文档中，screenshotMap[i]==false 的题强制 0
+		for i := range result.Questions {
+			if i < len(screenshotMap) && !screenshotMap[i] {
+				result.Questions[i].Score       = 0
+				result.Questions[i].CorrectRate = 0
+				result.Questions[i].ErrorPoints = []string{"未提供代码截图，属于空题"}
+			}
+		}
+		// 重算总分
+		total := 0
+		for _, q := range result.Questions {
+			total += q.Score
+		}
+		result.TotalScore = total
+	}
+
+	return result, nil
+}
+
+// detectQuestionScreenshots 分析 trimmed blocks，返回每个 TextBlock 后是否紧跟 ImageBlock。
+// 索引 i 对应第 i 个 TextBlock，与 AI 返回的 questions[i] 位置对齐。
+// 注意：mergeBlocks 只合并中间无 ImageBlock 的连续段落，因此有截图的题目不会与相邻题目合并，
+// 位置映射对"末尾无截图题"场景仍然准确。
+func detectQuestionScreenshots(blocks []docparser.ContentBlock) []bool {
+	var textPositions []int
+	for i, b := range blocks {
+		if b.Type == docparser.BlockText {
+			textPositions = append(textPositions, i)
+		}
+	}
+	result := make([]bool, len(textPositions))
+	for qi, ti := range textPositions {
+		nextText := len(blocks)
+		if qi+1 < len(textPositions) {
+			nextText = textPositions[qi+1]
+		}
+		for j := ti + 1; j < nextText; j++ {
+			if blocks[j].Type == docparser.BlockImage {
+				result[qi] = true
+				break
+			}
+		}
+	}
+	return result
 }
 
 // gradeTextOnly 纯文字降级路径：提取文档文字内容发给模型（截图部分无法评分）
@@ -224,13 +290,17 @@ func ParseResult(text string) (*GradingResult, error) {
 		if q.MaxScore <= 0 {
 			q.MaxScore = 1 // 兜底最小值，保留 AI 给出的实际分值
 		}
-		if q.CorrectRate > 60 {
+		if q.CorrectRate > 80 {
 			q.Score = q.MaxScore
 		} else {
 			q.Score = 0
 		}
 		if q.ErrorPoints == nil {
 			q.ErrorPoints = []string{}
+		}
+		// 得 0 分但没有任何错误点时，自动补充原因（如正确率恰好踩线或未达标）
+		if q.Score == 0 && len(q.ErrorPoints) == 0 && q.CorrectRate > 0 {
+			q.ErrorPoints = []string{fmt.Sprintf("代码正确率为 %d%%，未达到 80%% 最低得分线", q.CorrectRate)}
 		}
 	}
 
@@ -269,10 +339,16 @@ const multimodalPrompt = `你是一位专业的程序设计课程阅卷助手。
 【第二步：逐项批改】
 对照小项要求，查看该小项对应的截图（紧跟在小项文字后面的图片），判断：
 - correctRate：正确率（0~100 整数，综合逻辑正确性、语法正确性、覆盖要求的程度）
-- score：correctRate > 60 得满分（maxScore），否则得 0
+- score：correctRate > 80 得满分（maxScore），否则得 0
 - errorPoints：该小项的具体错误列表（无错误则 []）
 - correctApproach：针对该小项的正确解题思路（1~2 句话）
 - answerCompletion：该小项完整正确的代码答案
+
+【空题处理规则（强制）】
+如果某个小项后面没有紧跟任何截图，说明学生未提交该小项的代码截图，必须：
+- correctRate = 0，score = 0
+- errorPoints = ["未提供代码截图，属于空题"]
+- 不得根据文字内容推测或编造评分
 
 【输出格式】
 严格输出以下 JSON，不得包含 markdown 代码块或其他文字：
@@ -309,7 +385,9 @@ const multimodalPrompt = `你是一位专业的程序设计课程阅卷助手。
 - title 必须原文复制小项文字（含分值标注），不允许归纳改写
 - maxScore 必须来自小项括注的分值，不能填大题总分
 - score 只能是 0 或 maxScore，不能有中间值
-- 每个小项只看它后面紧跟的截图，不能把其他小项的截图混入`
+- score 规则：correctRate > 80 得满分（maxScore），否则得 0
+- 每个小项只看它后面紧跟的截图，不能把其他小项的截图混入
+- 若小项后面没有截图，必须给 score=0，errorPoints=["未提供代码截图，属于空题"]，不能编造评分`
 
 const textOnlySysPrompt = `你是一位专业的程序设计课程阅卷助手。评分单元是「编号小项」（如 1. 定义…（4分）），不是大题。请对每个编号小项单独评分，输出结构化 JSON 结果。`
 

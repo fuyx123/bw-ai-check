@@ -31,6 +31,12 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+rbac-admin/.env.android
+
+# Backend local build artifacts
+backend/bin/
+backend/server
+backend/role_menus_backup_*.json
 
 # OS
 Thumbs.db

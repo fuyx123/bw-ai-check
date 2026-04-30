@@ -54,7 +54,7 @@ export class AccessService {
       return {
         roleId: 'role-student',
         role: '学生',
-        dataScope: 'class',
+        dataScope: 'personal',
       };
     }
 
@@ -63,7 +63,7 @@ export class AccessService {
       return {
         roleId: primaryRoleId,
         role: user.roleName || primaryRoleId,
-        dataScope: 'class',
+        dataScope: 'personal',
       };
     }
 
@@ -196,6 +196,9 @@ export class AccessService {
     if (user.dataScope === 'school') {
       return 'dept-root';
     }
+    if (user.dataScope === 'personal') {
+      return null;
+    }
 
     const ancestors = this.getAncestorDepartments(user.classId || user.departmentId);
 
@@ -221,12 +224,18 @@ export class AccessService {
     if (user.dataScope === 'school') {
       return [...departments];
     }
+    if (user.dataScope === 'personal') {
+      return [];
+    }
     return departments.filter((department) => this.canAccessDepartment(user, department.id));
   }
 
   filterUsers(user: AuthenticatedUser, users = this.store.users): UserRecord[] {
     if (user.dataScope === 'school') {
       return [...users];
+    }
+    if (user.dataScope === 'personal') {
+      return users.filter((entry) => entry.id === user.id);
     }
     return users.filter((entry) => this.canAccessDepartment(user, entry.classId || entry.departmentId));
   }

@@ -38,10 +38,11 @@ const dataScopeOptions: { key: DataScope; level: string; name: string; desc: str
   { key: 'college', level: '2级', name: '学院 (学院)', desc: '本学院数据' },
   { key: 'major', level: '3级', name: '专业 (专业)', desc: '本专业数据' },
   { key: 'class', level: '4级', name: '班级 (班级)', desc: '本班级数据' },
+  { key: 'personal', level: '5级', name: '个人 (个人)', desc: '仅本人数据' },
 ];
 
 const scopeLabels: Record<string, string> = {
-  school: '学校', college: '学院', major: '专业', class: '班级',
+  school: '学校', college: '学院', major: '专业', class: '班级', personal: '个人',
 };
 
 function buildPersistedPermissions(permissionIds: string[], ancestorsById: Map<string, string[]>) {
@@ -689,6 +690,7 @@ const RolePage: React.FC = () => {
                     rowKey="id"
                     pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条记录` }}
                     size="middle"
+                    scroll={{ x: 'max-content' }}
                   />
                 </div>
               </Col>

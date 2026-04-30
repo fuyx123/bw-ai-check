@@ -34,6 +34,9 @@ func CORS(allowOrigins string) gin.HandlerFunc {
 		}
 
 		hostname := parsed.Hostname()
+		if origin == "capacitor://localhost" || origin == "ionic://localhost" {
+			return true
+		}
 		switch hostname {
 		case "localhost", "127.0.0.1", "::1":
 			return parsed.Scheme == "http" || parsed.Scheme == "https"

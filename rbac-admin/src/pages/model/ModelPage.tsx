@@ -294,6 +294,7 @@ const ModelPage: React.FC = () => {
           loading={loading}
           size="small"
           pagination={false}
+          scroll={{ x: 'max-content' }}
           rowClassName={(r) => r.enabled ? 'row-enabled' : ''}
         />
       </Card>

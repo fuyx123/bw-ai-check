@@ -22,8 +22,9 @@ type AnswerFile struct {
 	AIComment     string     `gorm:"column:ai_comment;type:text" json:"aiComment"`                  // 向下兼容，保留纯文本批注
 	AIScore       int        `gorm:"column:ai_score;default:0" json:"aiScore"`
 	AIDetail      string     `gorm:"column:ai_detail;type:longtext" json:"aiDetail"` // 结构化 JSON 评分
-	ManualScore   *int       `gorm:"column:manual_score" json:"manualScore"`         // null=未复阅
+	ManualScore   *int       `gorm:"column:manual_score" json:"manualScore"`                       // null=未复阅
 	ManualComment string     `gorm:"column:manual_comment;type:text" json:"manualComment"`
+	ManualDetail  string     `gorm:"column:manual_detail;type:longtext" json:"manualDetail"`       // 逐题人工评分 JSON
 	GraderID      string     `gorm:"column:grader_id;type:varchar(64)" json:"graderId"`
 	GradedAt      *time.Time `gorm:"column:graded_at" json:"gradedAt"`
 	CreatedAt     time.Time  `gorm:"column:created_at;autoCreateTime" json:"createdAt"`
